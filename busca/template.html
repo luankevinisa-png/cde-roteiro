@@ -217,7 +217,7 @@ const posOf = l => l.Galeria ? GAL_POS.get(l.Galeria) : (l.lat != null ? { lat: 
 const fill = (sel, values) => [...new Set(values)].sort((a, b) => a.localeCompare(b, "pt")).forEach(v => sel.append(new Option(v, v)));
 fill($("nicho"), LOJAS.flatMap(nichos));
 fill($("galeria"), [...GALERIAS.keys()]);
-$("sub").textContent = `${LOJAS.length} endereços · dados do Compras Paraguai de ${GERADO} · horários de Brasília`;
+$("sub").textContent = `${LOJAS.length} endereços · lojas do OpenStreetMap de ${GERADO} · horário do Paraguai (igual a Brasília)`;
 
 // ---------- estado do roteiro (visitadas + histórico para desfazer + origem) ----------
 let state = { visitadas: [], historico: [], origem: null };
@@ -491,9 +491,10 @@ function render() {
     const d = l => posOf(l) ? haversine(state.origem, posOf(l)) : Infinity;
     shown = shown.map(l => [d(l), l]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
   }
-  $("list").innerHTML = shown.length ? shown.map(card).join("")
+  // shortcut: desenha só os 150 primeiros (celular trava com 1.300 cards); a busca acha o resto
+  $("list").innerHTML = shown.length ? shown.slice(0, 150).map(card).join("")
     : `<p class="empty">Nenhuma loja encontrada. Tente parte do nome, sem acento.</p>`;
-  $("count").textContent = `${shown.length} lojas na lista` + (visited.size ? ` · ${LOJAS.filter(l => visited.has(l.id)).length} visitadas escondidas` : "") + (state.origem ? " · mais perto primeiro" : "");
+  $("count").textContent = `${shown.length} lojas` + (shown.length > 150 ? " (mostrando 150, busque para achar outras)" : "") + (visited.size ? ` · ${LOJAS.filter(l => visited.has(l.id)).length} visitadas escondidas` : "") + (state.origem ? " · mais perto primeiro" : "");
   renderRoute(); renderSheet();
   try { localStorage.setItem("filtros", JSON.stringify({ q: $("q").value, n: $("nicho").value, g: $("galeria").value })) } catch {}
 }
