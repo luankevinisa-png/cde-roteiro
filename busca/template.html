@@ -65,6 +65,8 @@ h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; line
 /* roteiro: mapa + faixa + painel */
 #map { position: absolute; inset: 0; z-index: 0; background: var(--raised) }
 .leaflet-control-attribution { font-size: 10px }
+#map .leaflet-tile-pane { filter: grayscale(1) contrast(0.92) brightness(1.04) }
+#map.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) grayscale(1) brightness(0.85) contrast(0.9) }
 .over { position: absolute; left: 0; right: 0; z-index: 2; pointer-events: none;
   padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)) }
 .over > * { pointer-events: auto }
@@ -505,8 +507,9 @@ const dark = () => matchMedia("(prefers-color-scheme: dark)").matches && documen
 function ensureMap() {
   if (map || !canMap()) return;
   map = L.map("map", { zoomControl: false }).setView([-25.5097, -54.6111], 16);
-  L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark() ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`,
-    { maxZoom: 20, subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+  // mapa do OpenStreetMap (grátis, sem chave); o CSS deixa em tons de cinza para combinar com o app
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+  if (dark()) $("map").classList.add("dark");
   routeLine = L.polyline([], { color: cssVar("--fg"), weight: 7, opacity: 0.9, lineCap: "round" }).addTo(map);
   youAcc = L.circle([0, 0], { radius: 0, color: cssVar("--me"), weight: 1, fillOpacity: 0.12 }).addTo(map);
   youDot = L.circleMarker([0, 0], { radius: 9, color: "#ffffff", weight: 4, fillColor: cssVar("--me"), fillOpacity: 1 }).addTo(map);
