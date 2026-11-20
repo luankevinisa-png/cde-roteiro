@@ -2,6 +2,8 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 /* Layout: uma coluna para celular. Roteiro (próxima parada) no topo, busca fixa, cards empilhados; 2 colunas em telas largas */
 :root {
@@ -39,6 +41,10 @@ h1 { font: 700 clamp(26px, 6vw, 34px)/1.1 var(--font-display); margin: 0; letter
 .stop-meta b { color: var(--fg) }
 .row { display: flex; flex-wrap: wrap; gap: 8px }
 .row > * { flex: 1 1 140px }
+.nav { display: grid; gap: 8px }
+.step { font-size: 16px; line-height: 1.35; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; font-variant-numeric: tabular-nums }
+.step small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px }
+#map { height: 320px; border-radius: 14px; border: 1px solid var(--line); z-index: 0; background: var(--bg) }
 .origin { display: grid; gap: 8px; font-size: 14px; color: var(--muted) }
 .origin input { width: 100%; font: 500 15px var(--font-body); color: var(--fg); background: var(--bg);
   border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
@@ -122,6 +128,10 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45) }
       <a class="btn main" id="stop-go" target="_blank" rel="noopener">Ir a pé</a>
       <button class="btn soft" type="button" id="stop-open">Ver lojas</button>
       <button class="btn ghost" type="button" id="stop-done">Já fui</button>
+    </div>
+    <div class="nav" id="nav" hidden>
+      <div class="step" id="step" aria-live="polite"></div>
+      <div id="map" role="region" aria-label="Mapa com a rota a pé até a próxima parada"></div>
     </div>
     <div class="origin">
       <div class="row">
@@ -248,12 +258,20 @@ function save() {
 function setOrigin(lat, lng, label) { state.origem = { lat, lng, label }; save(); render() }
 function showMsg(t) { $("msg").textContent = t; $("msg").hidden = !t }
 
+let watchId = null, lastListPos = null;
+function onPos(p) {
+  showMsg(""); state.gps = true;
+  state.origem = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, label: `GPS (±${Math.round(p.coords.accuracy)} m)` };
+  // a lista só reordena depois de andar 30 m, para não pular enquanto você rola
+  if (!lastListPos || haversine(lastListPos, state.origem) > 30) { lastListPos = state.origem; render() } else renderRoute();
+}
 function askGps(quiet) {
   if (!navigator.geolocation) { if (!quiet) showMsg("Este navegador não dá acesso ao GPS. Cole sua localização abaixo."); return }
-  navigator.geolocation.getCurrentPosition(
-    p => { showMsg(""); state.gps = true; setOrigin(p.coords.latitude, p.coords.longitude, `GPS (±${Math.round(p.coords.accuracy)} m)`) },
-    () => { state.gps = false; if (!quiet) showMsg("O GPS não foi liberado aqui. No Google Maps, toque e segure onde você está, copie as coordenadas e cole abaixo. Depois da primeira loja, o roteiro segue a partir da última que você marcou.") },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 });
+  if (watchId != null) return;
+  watchId = navigator.geolocation.watchPosition(onPos, () => {
+    navigator.geolocation.clearWatch(watchId); watchId = null; state.gps = false;
+    if (!quiet) showMsg("O GPS não foi liberado aqui. No Google Maps, toque e segure onde você está, copie as coordenadas e cole abaixo. Depois da primeira loja, o roteiro segue a partir da última que você marcou.");
+  }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
 }
 $("gps").addEventListener("click", () => askGps(false));
 $("paste").addEventListener("input", e => {
@@ -313,6 +331,7 @@ function renderRoute() {
   $("progress").textContent = `${done} de ${total} visitadas`;
   $("origin-label").textContent = state.origem ? `Calculando a partir de: ${state.origem.label}` : "";
   $("stop-actions").hidden = !s;
+  updateNav(s);
   if (!state.origem) return;
   if (!s) { $("stop-name").textContent = "Roteiro concluído"; $("stop-meta").textContent = "Não há mais lojas pendentes com este filtro."; return }
   const l = s.lojas[0];
@@ -324,6 +343,91 @@ function renderRoute() {
   $("stop-open").hidden = !s.galeria;
   $("stop-done").textContent = s.galeria ? "Terminei a galeria" : "Já fui";
 }
+// ---------- rota a pé dentro da página (OpenStreetMap) ----------
+function distToLine(p, cs) { // metros do ponto até a linha da rota
+  const kx = 111320 * Math.cos(p.lat * Math.PI / 180), ky = 110540;
+  let best = Infinity;
+  for (let i = 1; i < cs.length; i++) {
+    const ax = (cs[i - 1].lng - p.lng) * kx, ay = (cs[i - 1].lat - p.lat) * ky, bx = (cs[i].lng - p.lng) * kx, by = (cs[i].lat - p.lat) * ky;
+    const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / ((dx * dx + dy * dy) || 1)));
+    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+  }
+  return best;
+}
+console.assert(Math.abs(distToLine({ lat: -25.5101, lng: -54.61 }, [{ lat: -25.51, lng: -54.611 }, { lat: -25.51, lng: -54.609 }]) - 11) < 1, "distToLine");
+
+const DIR = { left: "à esquerda", right: "à direita", "slight left": "levemente à esquerda", "slight right": "levemente à direita",
+  "sharp left": "bem à esquerda", "sharp right": "bem à direita", uturn: "e volte" };
+function instr(st) {
+  const m = st.maneuver, rua = st.name ? ` na ${st.name}` : "";
+  if (m.type === "arrive") return "você chega à parada";
+  if (m.type === "roundabout" || m.type === "rotary") return `na rotatória, pegue a ${m.exit || ""}ª saída${rua}`;
+  if (!m.modifier || m.modifier === "straight") return `siga em frente${rua}`;
+  return `vire ${DIR[m.modifier]}${rua}`;
+}
+
+let map, youDot, youAcc, stopDot, routeLine, route = null, routeKey = null, routeAt = 0, arrivedKey = null;
+const canMap = () => typeof L !== "undefined" && !window.claude; // dentro do claude.ai o mapa é bloqueado
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function updateNav(s) {
+  const show = !!(s && state.origem && canMap());
+  const wasHidden = $("nav").hidden;
+  $("nav").hidden = !show;
+  if (!show) return;
+  if (!map) {
+    map = L.map("map", { zoomControl: false });
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+    routeLine = L.polyline([], { color: cssVar("--accent"), weight: 6, opacity: 0.9 }).addTo(map);
+    youAcc = L.circle([0, 0], { radius: 0, color: "#2a7de1", weight: 1, fillOpacity: 0.12 }).addTo(map);
+    youDot = L.circleMarker([0, 0], { radius: 8, color: "#ffffff", weight: 3, fillColor: "#2a7de1", fillOpacity: 1 }).addTo(map);
+    stopDot = L.circleMarker([0, 0], { radius: 11, color: "#ffffff", weight: 3, fillColor: "#d1495b", fillOpacity: 1 }).addTo(map);
+  } else if (wasHidden) map.invalidateSize();
+  youDot.setLatLng([state.origem.lat, state.origem.lng]);
+  youAcc.setLatLng([state.origem.lat, state.origem.lng]).setRadius(state.origem.acc || 0);
+  stopDot.setLatLng([s.pos.lat, s.pos.lng]).bindTooltip(s.galeria || s.lojas[0].Nome);
+  if (state.gps && s.dist < 30 && arrivedKey !== s.key) { // "cheguei": raio de 30 m, GPS erra entre prédios
+    arrivedKey = s.key; navigator.vibrate?.([200, 100, 200]);
+    toast(`Você chegou: ${s.galeria || s.lojas[0].Nome}`);
+  }
+  const off = route && distToLine(state.origem, route.coords) > 25;
+  if (routeKey !== s.key || (off && Date.now() - routeAt > 15000)) fetchRoute(s);
+  else renderStep();
+}
+
+async function fetchRoute(s) {
+  routeKey = s.key; routeAt = Date.now(); route = null;
+  const o = state.origem;
+  $("step").innerHTML = "Calculando a rota a pé…";
+  try {
+    const r = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${o.lng},${o.lat};${s.pos.lng},${s.pos.lat}?overview=full&geometries=geojson&steps=true`).then(r => r.json());
+    if (r.code !== "Ok") throw new Error(r.code);
+    if (routeKey !== s.key) return; // a parada mudou enquanto buscava
+    const rt = r.routes[0], coords = rt.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+    const cum = [0];
+    for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
+    const near = p => coords.reduce((bi, c, i) => haversine(p, c) < haversine(p, coords[bi]) ? i : bi, 0);
+    const steps = rt.legs[0].steps.map(st => ({ st, at: near({ lat: st.maneuver.location[1], lng: st.maneuver.location[0] }) }));
+    route = { coords, cum, steps, near };
+    routeLine.setStyle({ dashArray: null }).setLatLngs(coords.map(c => [c.lat, c.lng]));
+  } catch {
+    if (routeKey !== s.key) return;
+    route = null; // sem rota: linha reta tracejada, o botão "Ir a pé" continua valendo
+    routeLine.setStyle({ dashArray: "6 10" }).setLatLngs([[o.lat, o.lng], [s.pos.lat, s.pos.lng]]);
+  }
+  map.fitBounds(L.latLngBounds([routeLine.getLatLngs(), [o.lat, o.lng], [s.pos.lat, s.pos.lng]].flat()), { padding: [30, 30], maxZoom: 18 });
+  renderStep();
+}
+
+function renderStep() {
+  if (!route) { $("step").innerHTML = `Sem rota a pé agora. Siga a linha tracejada ou toque em “Ir a pé”.<small>${fmtDist(currentStop.dist)} em linha reta</small>`; return }
+  const me = state.origem, k = route.near(me);
+  const next = route.steps.find((x, i) => i > 0 && x.at > k) || route.steps[route.steps.length - 1];
+  const left = route.cum[route.cum.length - 1] - route.cum[k] + haversine(me, route.coords[k]);
+  const toTurn = haversine(me, { lat: next.st.maneuver.location[1], lng: next.st.maneuver.location[0] });
+  $("step").innerHTML = `<b>Em ${fmtDist(toTurn)}</b>, ${esc(instr(next.st))}<small>Faltam ${fmtDist(left)} a pé · cerca de ${Math.max(1, Math.round(left / 75))} min</small>`;
+}
+
 $("stop-open").addEventListener("click", () => currentStop && openGaleria(currentStop.galeria));
 $("stop-done").addEventListener("click", () => currentStop && markVisited(currentStop.lojas.map(l => l.id), currentStop.galeria || currentStop.lojas[0].Nome));
 
