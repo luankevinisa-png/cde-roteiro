@@ -25,5 +25,8 @@ page = page.replace("__DADOS__", data).replace("__GERADO__", date.today().strfti
 (ROOT / "docs" / "index.html").write_text(
     '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-    "<style>body{margin:0}[hidden]{display:none!important}</style></head><body>" + page + "</body></html>", encoding="utf-8")
+    '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#000000">'
+    '<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">'
+    "<style>body{margin:0}[hidden]{display:none!important}</style></head><body>" + page
+    + "<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')</script></body></html>", encoding="utf-8")
 print(f"{len(lojas)} lojas -> busca/lojas-cde.html e docs/index.html")

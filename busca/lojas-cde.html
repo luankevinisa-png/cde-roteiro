@@ -1,227 +1,261 @@
-<title>Lojas de Ciudad del Este</title>
+<title>Jaha</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-/* Layout: uma coluna para celular. Roteiro (próxima parada) no topo, busca fixa, cards empilhados; 2 colunas em telas largas */
+/* Layout: app de tela cheia. Aba Roteiro = mapa inteiro + faixa da curva em cima + painel embaixo (Waze);
+   preto e branco, botões grandes (Uber). Abas Lojas e Salvos rolam por dentro. Azul só no "você está aqui". */
 :root {
-  --bg: #f3f6f5; --surface: #ffffff; --fg: #13201b; --muted: #56675f;
-  --line: #d9e2de; --accent: #0b7356; --accent-fg: #ffffff; --accent-soft: #e2f1eb;
-  --wa: #0d7a3f; --warn: #8a5a00; --warn-soft: #fbf0d9;
-  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --font-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bg: #ffffff; --surface: #ffffff; --raised: #f3f3f3; --fg: #000000; --muted: #5e5e5e; --line: #e6e6e6;
+  --btn: #000000; --btn-fg: #ffffff; --banner: #000000; --banner-fg: #ffffff; --banner-sub: #bdbdbd;
+  --me: #1e6bff; --done: #9a9a9a; --ok: #0a7a3d; --closed: #b3261e;
+  --font: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --tabs-h: calc(62px + env(safe-area-inset-bottom, 0px));
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0d1412; --surface: #151f1c; --fg: #e6eeeb; --muted: #97aaa2;
-  --line: #26332f; --accent: #46c99d; --accent-fg: #06221a; --accent-soft: #173029;
-  --wa: #4cd486; --warn: #f0c36a; --warn-soft: #2c2412; color-scheme: dark } }
+  --bg: #000000; --surface: #121212; --raised: #1f1f1f; --fg: #ffffff; --muted: #a8a8a8; --line: #2a2a2a;
+  --btn: #ffffff; --btn-fg: #000000; --banner: #ffffff; --banner-fg: #000000; --banner-sub: #555555;
+  --me: #4d8dff; --done: #6b6b6b; --ok: #4cc27f; --closed: #ff8a80; color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #0d1412; --surface: #151f1c; --fg: #e6eeeb; --muted: #97aaa2;
-  --line: #26332f; --accent: #46c99d; --accent-fg: #06221a; --accent-soft: #173029;
-  --wa: #4cd486; --warn: #f0c36a; --warn-soft: #2c2412; color-scheme: dark }
+  --bg: #000000; --surface: #121212; --raised: #1f1f1f; --fg: #ffffff; --muted: #a8a8a8; --line: #2a2a2a;
+  --btn: #ffffff; --btn-fg: #000000; --banner: #ffffff; --banner-fg: #000000; --banner-sub: #555555;
+  --me: #4d8dff; --done: #6b6b6b; --ok: #4cc27f; --closed: #ff8a80; color-scheme: dark }
 
-* { box-sizing: border-box }
-body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--font-body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 0 48px }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
-.wrap { max-width: 960px; margin: 0 auto }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
+html, body { height: 100% }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 500 16px/1.45 var(--font); overflow: hidden }
+button, input, select { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 2px solid var(--me); outline-offset: 2px }
+.app { position: fixed; inset: 0; display: flex; flex-direction: column }
+.view { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain }
+.pad { padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)) }
 
-header { padding-block: 20px 4px }
-h1 { font: 700 clamp(26px, 6vw, 34px)/1.1 var(--font-display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
-.sub { color: var(--muted); margin: 6px 0 0; font-size: 14px }
+/* abas */
+.tabs { display: flex; background: var(--surface); border-top: 1px solid var(--line);
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(8px, env(safe-area-inset-left, 0px)) }
+.tabs button { flex: 1; background: none; border: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); min-height: 56px }
+.tabs button[aria-selected="true"] { color: var(--fg) }
+.tabs svg { width: 24px; height: 24px }
 
-/* Roteiro */
-.route { margin-top: 14px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 18px; padding: 16px;
-  display: grid; gap: 12px }
-.stop-name { font: 700 22px/1.15 var(--font-display); margin: 2px 0 0; overflow-wrap: anywhere }
-.stop-meta { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums }
-.stop-meta b { color: var(--fg) }
-.row { display: flex; flex-wrap: wrap; gap: 8px }
-.row > * { flex: 1 1 140px }
-.nav { display: grid; gap: 8px }
-.step { font-size: 16px; line-height: 1.35; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; font-variant-numeric: tabular-nums }
-.step small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px }
-#map { height: 320px; border-radius: 14px; border: 1px solid var(--line); z-index: 0; background: var(--bg) }
-.origin { display: grid; gap: 8px; font-size: 14px; color: var(--muted) }
-.origin input, .field input { width: 100%; font: 500 15px var(--font-body); color: var(--fg); background: var(--bg);
-  border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
-.field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted) }
-button:disabled { opacity: 0.5; cursor: not-allowed }
-.trip { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line) }
-.trip input { font: 600 17px var(--font-display); color: var(--fg); background: transparent; border: 0;
-  border-bottom: 1.5px dashed var(--line); padding: 4px 0; width: 100%; min-width: 0 }
-.trip input:focus { outline: none; border-bottom-color: var(--accent) }
-.trip .row .btn { min-height: 44px }
-.trip.current { background: var(--accent-soft); border-radius: 12px; padding: 12px; border-bottom: 0 }
-.msg { font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 8px 10px }
-.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted) }
-.link { background: none; border: 0; padding: 6px 2px; font: 600 14px var(--font-body); color: var(--accent); cursor: pointer; min-height: 40px }
-.link.danger { color: var(--warn) }
-
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
-  padding-block: 12px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); margin-top: 8px }
-.search { width: 100%; font: 500 17px var(--font-body); color: var(--fg); background: var(--surface);
-  border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 16px; min-height: 52px }
-.search:focus, .origin input:focus, .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
-.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
-select { width: 100%; min-width: 0; font: 500 14px var(--font-body); color: var(--fg); background: var(--surface);
-  border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
-.multi { position: relative; min-width: 0 }
-.multi summary { list-style: none; cursor: pointer; font: 500 14px var(--font-body); color: var(--fg); background: var(--surface);
-  border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 30px 10px 12px; min-height: 44px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative }
-.multi summary::-webkit-details-marker { display: none }
-.multi summary::after { content: "▾"; position: absolute; right: 12px; color: var(--muted) }
-.multi[open] summary { border-color: var(--accent) }
-.opts { position: absolute; left: 0; top: calc(100% + 6px); z-index: 6; width: min(320px, calc(100vw - 32px));
-  max-height: 55vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  padding: 6px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.18) }
-.opts label { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; font-size: 15px; cursor: pointer }
-.opts label:hover { background: var(--accent-soft) }
-.opts input { width: 20px; height: 20px; accent-color: var(--accent); flex: none }
-.opts .link { width: 100%; text-align: left; padding: 10px }
-summary:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
-.count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums }
-
-.list { display: grid; gap: 12px; margin-top: 14px; grid-template-columns: 1fr }
-@media (min-width: 720px) { .list { grid-template-columns: 1fr 1fr } }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px;
-  display: flex; flex-direction: column; gap: 10px; min-width: 0 }
-.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px }
-.name { font: 600 19px/1.2 var(--font-display); margin: 0; overflow-wrap: anywhere }
-.nicho { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft);
-  border-radius: 999px; padding: 3px 10px; white-space: nowrap; max-width: 50%; overflow: hidden; text-overflow: ellipsis }
-.where { font-weight: 600; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline }
-.where .floor, .dist { color: var(--muted); font-weight: 500 }
-.dist { font-variant-numeric: tabular-nums; margin-left: auto }
-.gal { background: none; border: 0; padding: 0; font: inherit; color: var(--fg); text-decoration: underline;
-  text-decoration-color: var(--line); text-underline-offset: 3px; cursor: pointer; text-align: left }
-dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px }
-dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px }
-dd { margin: 0; min-width: 0; overflow-wrap: anywhere; user-select: text }
-dd a { color: var(--accent); font-weight: 600; text-decoration: none }
-dd a.wa { color: var(--wa) }
-.note { font-size: 13px; color: var(--muted) }
-.actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 2px }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px;
-  border-radius: 12px; font: 600 15px var(--font-body); text-decoration: none; cursor: pointer; padding: 0 10px; text-align: center }
-.btn.ghost { background: transparent; color: var(--fg); border: 1.5px solid var(--line) }
-.btn.main { background: var(--accent); color: var(--accent-fg); border: 1.5px solid var(--accent) }
-.btn.soft { background: var(--accent-soft); color: var(--accent); border: 1.5px solid transparent }
+/* botões */
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border-radius: 12px;
+  border: 0; font-weight: 700; font-size: 16px; text-decoration: none; text-align: center; padding: 0 14px }
+.btn.big { min-height: 58px; font-size: 18px }
+.btn.dark { background: var(--btn); color: var(--btn-fg) }
+.btn.grey { background: var(--raised); color: var(--fg) }
 .btn:active { transform: scale(0.98) }
-.btn svg { width: 18px; height: 18px; flex: none }
-.empty { text-align: center; color: var(--muted); padding: 40px 0 }
-.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-  max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 999px;
-  font-weight: 600; font-size: 14px; z-index: 20; text-align: center }
+.btn:disabled { opacity: 0.55; cursor: not-allowed }
+.row { display: flex; gap: 8px }
+.row > * { flex: 1; min-width: 0 }
+.link { background: none; border: 0; padding: 8px 2px; font-weight: 700; font-size: 14px; color: var(--fg); text-decoration: underline;
+  text-underline-offset: 3px; text-decoration-color: var(--line); min-height: 40px }
+.link.danger { color: var(--closed) }
+input.field, select.field { width: 100%; min-width: 0; background: var(--raised); border: 1.5px solid transparent; border-radius: 12px;
+  padding: 12px 14px; min-height: 48px; font-size: 16px }
+input.field:focus, select.field:focus { outline: none; border-color: var(--fg) }
+h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.1 }
+h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; line-height: 1.15; overflow-wrap: anywhere; text-wrap: balance }
+.meta { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums }
+.open { color: var(--ok) } .shut { color: var(--closed) }
 
-/* Galeria: folha com as lojas por andar */
-dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88vh; margin: auto auto 0; border-radius: 20px 20px 0 0;
+/* roteiro: mapa + faixa + painel */
+#map { position: absolute; inset: 0; z-index: 0; background: var(--raised) }
+.leaflet-control-attribution { font-size: 10px }
+.over { position: absolute; left: 0; right: 0; z-index: 2; pointer-events: none;
+  padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)) }
+.over > * { pointer-events: auto }
+.over.top { top: 0; padding-top: calc(10px + env(safe-area-inset-top, 0px)); display: grid; gap: 8px; justify-items: end }
+.banner { width: 100%; background: var(--banner); color: var(--banner-fg); border-radius: 18px; padding: 12px 14px;
+  display: flex; gap: 12px; align-items: center; min-height: 66px }
+.banner svg { width: 34px; height: 34px; flex: none; transition: transform 0.2s }
+.banner b { display: block; font-size: 24px; line-height: 1.05; font-variant-numeric: tabular-nums }
+.banner span { display: block; font-size: 14px; color: var(--banner-sub); overflow-wrap: anywhere }
+.chip { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+  font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: var(--surface); border-radius: 22px 22px 0 0;
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.12); display: grid; gap: 12px;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px)) }
+.grab { width: 38px; height: 4px; border-radius: 9px; background: var(--line); margin: 0 auto 2px }
+.stack { display: grid; gap: 12px }
+.stack[hidden] { display: none }
+.small-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px }
+.msg { font-size: 14px; color: var(--fg); background: var(--raised); border-radius: 12px; padding: 10px 12px }
+
+/* lojas */
+.search-wrap { position: sticky; top: 0; z-index: 3; background: var(--bg); display: grid; gap: 10px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)) }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px }
+.chips::-webkit-scrollbar { display: none }
+.chips button { flex: none; border: 0; border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 700;
+  background: var(--raised); color: var(--fg); white-space: nowrap; min-height: 40px }
+.chips button[aria-pressed="true"] { background: var(--btn); color: var(--btn-fg) }
+.list { padding: 0 max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px)) }
+.item { display: flex; gap: 12px; align-items: center; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line);
+  padding: 12px 0; text-align: left; min-height: 64px }
+.ico { width: 42px; height: 42px; border-radius: 12px; background: var(--raised); display: grid; place-items: center; flex: none }
+.ico svg { width: 22px; height: 22px }
+.item .t { flex: 1; min-width: 0 }
+.item .t b { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.item .t small { display: block; color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.item .d { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; flex: none }
+.fab { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabs-h) + 16px); z-index: 3; border: 0;
+  border-radius: 999px; background: var(--btn); color: var(--btn-fg); padding: 14px 18px; font-weight: 800; font-size: 15px;
+  display: flex; gap: 6px; align-items: center; box-shadow: 0 6px 18px rgb(0 0 0 / 0.22) }
+.fab svg { width: 20px; height: 20px }
+.empty { text-align: center; color: var(--muted); padding: 40px 12px }
+.count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums }
+
+/* folhas (galeria, detalhe, adicionar) */
+dialog { border: 0; padding: 0; width: 100%; max-width: 560px; max-height: 90vh; margin: auto auto 0; border-radius: 22px 22px 0 0;
   background: var(--surface); color: var(--fg) }
-@media (min-width: 600px) { dialog { margin: auto; border-radius: 20px } }
-dialog::backdrop { background: rgb(0 0 0 / 0.45) }
-.sheet { display: grid; gap: 14px; padding: 18px max(18px, env(safe-area-inset-left, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) }
-.sheet h2 { font: 700 22px/1.15 var(--font-display); margin: 0; overflow-wrap: anywhere }
-.floor-h { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0 }
+@media (min-width: 600px) { dialog { margin: auto; border-radius: 22px } }
+dialog::backdrop { background: rgb(0 0 0 / 0.5) }
+.dlg { display: grid; gap: 14px; padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)) }
+.dlg-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px }
+.x { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--raised); font-size: 18px; font-weight: 800 }
+.kicker { font-size: 13px; font-weight: 800; color: var(--me) }
+.floor-h { font-size: 13px; font-weight: 800; color: var(--muted); margin: 8px 0 0 }
 .shop { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line) }
 .shop > div { flex: 1; min-width: 0 }
 .shop b { display: block; overflow-wrap: anywhere }
 .shop small { color: var(--muted) }
-.shop.done b { text-decoration: line-through; color: var(--muted) }
-.shop .btn { min-height: 44px; flex: none; padding: 0 14px }
-@media (prefers-reduced-motion: reduce) { .btn:active { transform: none } }
+.shop.done b { text-decoration: line-through; color: var(--done) }
+.shop .btn { width: auto; min-height: 40px; font-size: 14px; padding: 0 14px; flex: none }
+dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 15px }
+dl[hidden] { display: none }
+dt { color: var(--muted); font-size: 13px; padding-top: 2px }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; user-select: text }
+dd a { color: var(--fg); font-weight: 700 }
+.lbl { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted) }
+
+/* salvos */
+.trip { display: grid; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line) }
+.trip input { font-weight: 800; font-size: 19px; background: transparent; border: 0; border-bottom: 1.5px dashed var(--line);
+  padding: 4px 0; width: 100%; min-width: 0 }
+.trip input:focus { outline: none; border-bottom-color: var(--fg) }
+.card { background: var(--raised); border-radius: 16px; padding: 14px; display: grid; gap: 10px }
+
+.toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 50;
+  max-width: calc(100% - 32px); background: var(--btn); color: var(--btn-fg); padding: 10px 16px; border-radius: 999px;
+  font-weight: 700; font-size: 14px; text-align: center }
+@media (prefers-reduced-motion: reduce) { .btn:active { transform: none } .banner svg { transition: none } }
 </style>
 
-<div class="wrap">
-  <header>
-    <h1>Lojas de Ciudad del Este</h1>
-    <p class="sub" id="sub"></p>
-  </header>
-
-  <section class="route" aria-label="Próxima parada">
-    <div>
-      <h2 class="stop-name" id="stop-name">Defina onde você está</h2>
-      <div class="stop-meta" id="stop-meta">Toque em “Perto de mim”, cole sua localização ou marque a primeira loja como “Já fui”.</div>
-    </div>
-    <div class="row" id="stop-actions" hidden>
-      <a class="btn main" id="stop-go" target="_blank" rel="noopener">Ir a pé</a>
-      <button class="btn soft" type="button" id="stop-open">Ver lojas</button>
-      <button class="btn ghost" type="button" id="stop-done">Já fui</button>
-    </div>
-    <div class="nav" id="nav" hidden>
-      <div class="step" id="step" aria-live="polite"></div>
-      <div id="map" role="region" aria-label="Mapa com a rota a pé até a próxima parada"></div>
-    </div>
-    <div class="origin">
-      <div class="row">
-        <button class="btn ghost" type="button" id="gps">Perto de mim</button>
-        <input id="paste" type="text" inputmode="decimal" placeholder="Colar localização (-25.51, -54.61)" aria-label="Colar localização do Google Maps">
+<div class="app">
+  <section class="view" id="v-rota" aria-label="Roteiro" style="overflow:hidden">
+    <div id="map" role="region" aria-label="Mapa com a rota a pé"></div>
+    <div class="over top">
+      <div class="banner" id="banner" hidden>
+        <svg id="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V5M5 11l7-7 7 7"/></svg>
+        <div><b id="turn-dist"></b><span id="turn-text"></span></div>
       </div>
-      <div class="msg" id="msg" hidden></div>
-      <div id="origin-label"></div>
+      <span class="chip" id="progress"></span>
     </div>
-    <div class="tools">
-      <span id="progress"></span>
-      <button class="link" type="button" id="undo">Desfazer última</button>
-      <button class="link" type="button" id="finish">Finalizar e salvar</button>
-      <button class="link" type="button" id="saved">Meus roteiros</button>
-      <button class="link" type="button" id="add">+ Adicionar loja aqui</button>
-      <button class="link" type="button" id="export" hidden>Copiar lojas adicionadas</button>
+    <div class="sheet" id="sheet">
+      <div class="grab"></div>
+      <div class="stack" id="s-where" hidden>
+        <h2>Onde você está?</h2>
+        <button class="btn big dark" type="button" id="gps">Usar meu GPS</button>
+        <input class="field" id="paste" type="text" inputmode="decimal" placeholder="Ou cole a localização (-25.51, -54.61)" aria-label="Colar localização">
+        <div class="msg" id="msg" hidden></div>
+      </div>
+      <div class="stack" id="s-stop" hidden>
+        <div>
+          <h2 id="stop-name"></h2>
+          <div class="meta" id="stop-meta"></div>
+        </div>
+        <button class="btn big dark" type="button" id="arrive">Cheguei</button>
+        <button class="btn grey" type="button" id="skip">Pular</button>
+      </div>
+      <div class="stack" id="s-done" hidden>
+        <h2>Roteiro concluído</h2>
+        <div class="meta">Não há mais lojas pendentes com os nichos escolhidos.</div>
+      </div>
+      <div class="small-links">
+        <button class="link" type="button" id="undo">Desfazer</button>
+        <button class="link" type="button" id="finish">Finalizar e salvar</button>
+      </div>
     </div>
   </section>
 
-  <div class="bar">
-    <input id="q" class="search" type="search" placeholder="Nome da loja, galeria ou rua" aria-label="Buscar loja" autocomplete="off">
-    <div class="filters">
-      <details class="multi" id="nicho-box">
-        <summary id="nicho-sum">Todos os nichos</summary>
-        <div class="opts" id="nicho" role="group" aria-label="Escolha um ou mais nichos"></div>
-      </details>
-      <select id="galeria" aria-label="Filtrar por galeria"><option value="">Todas as galerias</option><option value="-">Só lojas de rua</option></select>
+  <section class="view" id="v-lojas" aria-label="Lojas" hidden>
+    <div class="search-wrap">
+      <h1>jaha</h1>
+      <input class="field" id="q" type="search" placeholder="Buscar loja, galeria ou rua" aria-label="Buscar loja" autocomplete="off">
+      <div class="chips" id="chips" role="group" aria-label="Nichos"></div>
+      <select class="field" id="galeria" aria-label="Filtrar por galeria"><option value="">Todas as galerias</option><option value="-">Só lojas de rua</option></select>
+      <div class="count" id="count" aria-live="polite"></div>
     </div>
-    <div class="count" id="count" aria-live="polite"></div>
-  </div>
+    <div class="list" id="list"></div>
+    <button class="fab" type="button" id="add">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Adicionar loja
+    </button>
+  </section>
 
-  <main class="list" id="list"></main>
+  <section class="view" id="v-salvos" aria-label="Roteiros salvos" hidden>
+    <div class="pad" style="display:grid;gap:16px">
+      <h1>Roteiros</h1>
+      <div class="card" id="current"></div>
+      <div id="saved-list"></div>
+      <button class="link" type="button" id="export" hidden>Copiar lojas que você adicionou</button>
+      <p class="meta" id="sub"></p>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Seções">
+    <button type="button" role="tab" aria-selected="true" data-tab="v-rota">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H12"/></svg>Roteiro</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="v-lojas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10M19 21V10M4 7l2-4h12l2 4M4 7h16v1a3 3 0 0 1-6 0 3 3 0 0 1-4 0 3 3 0 0 1-6 0z"/></svg>Lojas</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="v-salvos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10a1 1 0 0 1 1 1v16l-6-4-6 4V5a1 1 0 0 1 1-1z"/></svg>Salvos</button>
+  </nav>
 </div>
 
-<dialog id="sheet" aria-labelledby="sheet-h">
-  <div class="sheet">
-    <div class="top">
-      <div><h2 id="sheet-h"></h2><div class="stop-meta" id="sheet-meta"></div></div>
-      <button class="btn ghost" type="button" id="sheet-close" aria-label="Fechar">✕</button>
+<dialog id="gal-dlg" aria-labelledby="gal-h">
+  <div class="dlg">
+    <div class="dlg-top">
+      <div><div class="kicker" id="gal-kicker"></div><h2 id="gal-h"></h2><div class="meta" id="gal-meta"></div></div>
+      <button class="x" type="button" data-close aria-label="Fechar">✕</button>
     </div>
+    <div id="gal-list"></div>
+    <button class="btn big dark" type="button" id="gal-leave">Sair e ir para a próxima</button>
+  </div>
+</dialog>
+
+<dialog id="shop-dlg" aria-labelledby="shop-h">
+  <div class="dlg">
+    <div class="dlg-top">
+      <div><div class="meta" id="shop-nicho"></div><h2 id="shop-h"></h2><div class="meta" id="shop-where"></div></div>
+      <button class="x" type="button" data-close aria-label="Fechar">✕</button>
+    </div>
+    <dl id="shop-info"></dl>
+    <button class="btn big dark" type="button" id="shop-go">Ir até aqui</button>
     <div class="row">
-      <a class="btn main" id="sheet-go" target="_blank" rel="noopener">Ir a pé</a>
-      <button class="btn ghost" type="button" id="sheet-all">Terminei a galeria</button>
+      <button class="btn grey" type="button" id="shop-visit">Já fui</button>
+      <button class="btn grey" type="button" id="shop-copy">Copiar endereço</button>
     </div>
-    <div id="sheet-list"></div>
+    <button class="btn grey" type="button" id="shop-gal" hidden>Ver lojas da galeria</button>
+    <button class="link danger" type="button" id="shop-remove" hidden>Remover esta loja</button>
   </div>
 </dialog>
+
 <dialog id="add-dlg" aria-labelledby="add-h">
-  <form class="sheet" id="add-form">
-    <div class="top">
-      <div><h2 id="add-h">Adicionar loja aqui</h2><div class="stop-meta" id="add-pos"></div></div>
-      <button class="btn ghost" type="button" id="add-close" aria-label="Fechar">✕</button>
+  <form class="dlg" id="add-form">
+    <div class="dlg-top">
+      <div><h2 id="add-h">Adicionar loja aqui</h2><div class="meta" id="add-pos"></div></div>
+      <button class="x" type="button" data-close aria-label="Fechar">✕</button>
     </div>
-    <label class="field">Nome da loja<input id="add-nome" required autocomplete="off"></label>
-    <label class="field">Nicho (opcional)<input id="add-nicho" list="dl-nichos" autocomplete="off"></label>
-    <label class="field">Galeria (opcional)<input id="add-gal" list="dl-gals" autocomplete="off"></label>
-    <label class="field">Andar (opcional)<input id="add-andar" placeholder="Ex.: Térreo, 2º andar" autocomplete="off"></label>
-    <button class="btn main" type="submit" id="add-save">Salvar loja</button>
+    <label class="lbl">Nome da loja<input class="field" id="add-nome" required autocomplete="off"></label>
+    <label class="lbl">Nicho (opcional)<input class="field" id="add-nicho" list="dl-nichos" autocomplete="off"></label>
+    <label class="lbl">Galeria (opcional)<input class="field" id="add-gal" list="dl-gals" autocomplete="off"></label>
+    <label class="lbl">Andar (opcional)<input class="field" id="add-andar" placeholder="Térreo, 2º andar" autocomplete="off"></label>
+    <button class="btn big dark" type="submit" id="add-save">Salvar loja</button>
   </form>
-</dialog>
-<dialog id="saved-dlg" aria-labelledby="saved-h">
-  <div class="sheet">
-    <div class="top">
-      <div><h2 id="saved-h">Meus roteiros</h2><div class="stop-meta">Toque no nome para mudar. Continuar traz as lojas visitadas de volta.</div></div>
-      <button class="btn ghost" type="button" id="saved-close" aria-label="Fechar">✕</button>
-    </div>
-    <div id="saved-list"></div>
-  </div>
 </dialog>
 <datalist id="dl-nichos"></datalist><datalist id="dl-gals"></datalist>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -235,9 +269,6 @@ const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const nichos = l => l.Nicho ? l.Nicho.split(",").map(s => s.trim()).filter(Boolean) : [];
 const fullAddress = l => [l.Nome, l.Galeria, l.Andar, l.Box && "Box " + l.Box, l.Endereço, "Ciudad del Este, Paraguai"].filter(Boolean).join(", ");
-const mapsUrl = l => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(
-  l.lat != null ? `${l.lat},${l.lng}` : [l.Nome, l.Galeria, l.Endereço, "Ciudad del Este"].filter(Boolean).join(", "));
-const walkUrl = p => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=walking`;
 
 function haversine(a, b) { // metros
   const R = 6371000, rad = Math.PI / 180;
@@ -246,9 +277,28 @@ function haversine(a, b) { // metros
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 const fmtDist = m => m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`;
+const minutos = m => Math.max(1, Math.round(m / 75)); // ~4,5 km/h a pé
 console.assert(Math.abs(haversine({ lat: -25.5106, lng: -54.6093 }, { lat: -25.5106, lng: -54.6193 }) - 1004) < 5, "haversine");
 
-// ids estáveis: mesmo texto do CSV = mesma loja (filiais têm endereço diferente)
+// horário do site: "Segunda a Sexta 07:00-16:00; Sábado 07:00-15:00" (Brasília = Paraguai, UTC-3)
+const DIAS = { domingo: 0, segunda: 1, terca: 2, quarta: 3, quinta: 4, sexta: 5, sabado: 6 };
+function abertaAgora(h, now = new Date()) {
+  if (!h) return null;
+  const d = now.getDay(), min = now.getHours() * 60 + now.getMinutes();
+  for (const parte of h.split(";")) {
+    const m = norm(parte).match(/^\s*([a-z]+)(?:\s+a\s+([a-z]+))?\s+(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+    if (!m || !(m[1] in DIAS)) continue;
+    const a = DIAS[m[1]], b = m[2] in DIAS ? DIAS[m[2]] : a;
+    if (a <= b ? d >= a && d <= b : d >= a || d <= b) return min >= +m[3] * 60 + +m[4] && min < +m[5] * 60 + +m[6];
+  }
+  return false; // tem horário, mas não abre hoje
+}
+console.assert(abertaAgora("Segunda a Sexta 07:00-16:00", new Date(2026, 10, 20, 10)) === true
+  && abertaAgora("Segunda a Sexta 07:00-16:00", new Date(2026, 10, 20, 17)) === false
+  && abertaAgora("Segunda a Sexta 07:00-16:00", new Date(2026, 10, 22, 10)) === false, "abertaAgora");
+const statusTxt = h => { const a = abertaAgora(h); return a === null ? "" : a ? `<span class="open">aberta</span>` : `<span class="shut">fechada agora</span>` };
+
+// ---------- dados: base do site + lojas que você adicionou ----------
 function prep(l) {
   l.id = l.criada ? "extra|" + l.criada : [l.Nome, l.Galeria, l.Andar, l.Endereço, l.Latitude].join("|");
   l._q = norm([l.Nome, l.Galeria, l.Endereço, l.Nicho].join(" "));
@@ -258,7 +308,7 @@ function prep(l) {
 }
 const BASE = LOJAS.map(prep);
 let BY_ID, GALERIAS, GAL_POS;
-function reindex() { // base do site + lojas que você adicionou
+function reindex() {
   LOJAS.splice(0, LOJAS.length, ...BASE, ...(state.extras || []).map(e => prep({ ...e })));
   LOJAS.sort((a, b) => a.Nome.localeCompare(b.Nome, "pt"));
   BY_ID = new Map(LOJAS.map(l => [l.id, l]));
@@ -269,36 +319,23 @@ function reindex() { // base do site + lojas que você adicionou
     return [g, c.length ? { lat: c.reduce((s, l) => s + l.lat, 0) / c.length, lng: c.reduce((s, l) => s + l.lng, 0) / c.length } : null];
   }));
   const n = (state.extras || []).length;
-  $("sub").textContent = `${BASE.length} endereços do Compras Paraguai de ${GERADO}` + (n ? ` + ${n} ${n > 1 ? "adicionadas" : "adicionada"} por você` : "") + " · horário de Brasília";
+  $("sub").textContent = `${BASE.length} endereços do Compras Paraguai de ${GERADO}` + (n ? ` + ${n} ${n > 1 ? "adicionadas" : "adicionada"} por você` : "") + ". Horário de Brasília (igual ao do Paraguai).";
   $("export").hidden = !n;
   $("dl-nichos").innerHTML = [...new Set(LOJAS.flatMap(nichos))].map(v => `<option value="${esc(v)}">`).join("");
   $("dl-gals").innerHTML = [...GALERIAS.keys()].map(v => `<option value="${esc(v)}">`).join("");
 }
 const posOf = l => l.Galeria ? GAL_POS.get(l.Galeria) : (l.lat != null ? { lat: l.lat, lng: l.lng } : null);
-const fill = (sel, values) => [...new Set(values)].sort((a, b) => a.localeCompare(b, "pt")).forEach(v => sel.append(new Option(v, v)));
 
-// ---------- estado do roteiro (visitadas + histórico para desfazer + origem) ----------
-let state = { visitadas: [], historico: [], origem: null, extras: [], roteiros: [], atualId: null };
+// ---------- estado (fica no aparelho e, dentro do claude.ai, na sua conta) ----------
+let state = { visitadas: [], puladas: [], historico: [], origem: null, destino: null, extras: [], roteiros: [], atualId: null };
 const LS_KEY = "roteiro";
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY) || "{}")) } catch {}
-let visited = new Set(state.visitadas);
+let visited = new Set(state.visitadas), skipped = new Set(state.puladas || []);
 let remoteDoc = null, writing = Promise.resolve();
 reindex();
-$("nicho").innerHTML = `<button class="link" type="button" id="nicho-clear">Todos os nichos</button>` +
-  [...new Set(BASE.flatMap(nichos))].sort((a, b) => a.localeCompare(b, "pt"))
-    .map(v => `<label><input type="checkbox" value="${esc(v)}">${esc(v)}</label>`).join("");
-let NSEL = new Set(); // nichos marcados; vazio = todos
-function syncNichos() {
-  NSEL = new Set([...$("nicho").querySelectorAll("input:checked")].map(i => i.value));
-  $("nicho-sum").textContent = !NSEL.size ? "Todos os nichos" : NSEL.size === 1 ? [...NSEL][0] : `${NSEL.size} nichos`;
-}
-$("nicho").addEventListener("change", () => { syncNichos(); render() });
-$("nicho-clear").addEventListener("click", () => { $("nicho").querySelectorAll("input").forEach(i => i.checked = false); syncNichos(); render(); $("nicho-box").open = false });
-document.addEventListener("click", e => { if (!$("nicho-box").contains(e.target)) $("nicho-box").open = false });
-fill($("galeria"), [...new Set(BASE.map(l => l.Galeria).filter(Boolean))]);
 
 function save() {
-  state.visitadas = [...visited];
+  state.visitadas = [...visited]; state.puladas = [...skipped];
   state.historico = state.historico.slice(-50);
   try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch {}
   if (remoteDoc) { // uma escrita por vez no mesmo documento
@@ -307,7 +344,7 @@ function save() {
   }
 }
 
-(async () => { // guarda o progresso na conta (sobrevive a limpar o navegador e vale em outro aparelho)
+(async () => { // só existe dentro do claude.ai; no GitHub Pages fica só no aparelho
   try {
     const [db, user] = await Promise.all([window.claude?.use?.("db"), window.claude?.use?.("user")]);
     const uid = db && user && await user.id();
@@ -317,23 +354,36 @@ function save() {
     remoteDoc = doc;
     if (snap.exists) {
       const d = snap.data();
-      // lojas adicionadas: junta as da conta com as deste aparelho (a mais recente de cada vence)
-      const extras = [...new Map([...(d.extras || []), ...(state.extras || [])].map(e => [e.criada, e])).values()];
-      const roteiros = [...new Map([...(d.roteiros || []), ...(state.roteiros || [])].map(r => [r.id, r])).values()];
-      state = { visitadas: d.visitadas || [], historico: d.historico || [], origem: d.origem || null, extras, roteiros, atualId: d.atualId ?? null };
-      reindex();
-      visited = new Set(state.visitadas);
+      const merge = (a, b, k) => [...new Map([...(a || []), ...(b || [])].map(x => [x[k], x])).values()];
+      state = { ...state, ...d, extras: merge(d.extras, state.extras, "criada"), roteiros: merge(d.roteiros, state.roteiros, "id") };
+      visited = new Set(state.visitadas || []); skipped = new Set(state.puladas || []);
       try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch {}
-      render();
+      reindex(); render();
     } else if (visited.size || state.origem) save();
   } catch {}
 })();
 
-// ---------- origem: GPS, localização colada ou a última loja marcada ----------
-function setOrigin(lat, lng, label) { state.origem = { lat, lng, label }; save(); render() }
-function showMsg(t) { $("msg").textContent = t; $("msg").hidden = !t }
+// ---------- filtros: nichos (vários) e galeria ----------
+let NSEL = new Set();
+$("chips").innerHTML = [...new Set(BASE.flatMap(nichos))].sort((a, b) => a.localeCompare(b, "pt"))
+  .map(v => `<button type="button" aria-pressed="false" data-n="${esc(v)}">${esc(v)}</button>`).join("");
+function setNichos(list) {
+  NSEL = new Set(list);
+  $("chips").querySelectorAll("[data-n]").forEach(b => b.setAttribute("aria-pressed", NSEL.has(b.dataset.n)));
+}
+$("chips").addEventListener("click", e => {
+  const b = e.target.closest("[data-n]"); if (!b) return;
+  NSEL.has(b.dataset.n) ? NSEL.delete(b.dataset.n) : NSEL.add(b.dataset.n);
+  setNichos([...NSEL]); render();
+});
+[...new Set(BASE.map(l => l.Galeria).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt")).forEach(g => $("galeria").append(new Option(g, g)));
+const inFilter = l => { const g = $("galeria").value;
+  return (!NSEL.size || nichos(l).some(x => NSEL.has(x))) && (!g || (g === "-" ? !l.Galeria : l.Galeria === g)) };
+const pendente = l => !visited.has(l.id) && !skipped.has(l.id);
 
+// ---------- posição: GPS contínuo, localização colada ou a última loja ----------
 let watchId = null, lastListPos = null;
+function showMsg(t) { $("msg").textContent = t; $("msg").hidden = !t }
 function onPos(p) {
   showMsg(""); state.gps = true;
   state.origem = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, label: `GPS (±${Math.round(p.coords.accuracy)} m)` };
@@ -341,11 +391,11 @@ function onPos(p) {
   if (!lastListPos || haversine(lastListPos, state.origem) > 30) { lastListPos = state.origem; render() } else renderRoute();
 }
 function askGps(quiet) {
-  if (!navigator.geolocation) { if (!quiet) showMsg("Este navegador não dá acesso ao GPS. Cole sua localização abaixo."); return }
+  if (!navigator.geolocation) { if (!quiet) showMsg("Este navegador não dá acesso ao GPS. Cole sua localização."); return }
   if (watchId != null) return;
   watchId = navigator.geolocation.watchPosition(onPos, () => {
     navigator.geolocation.clearWatch(watchId); watchId = null; state.gps = false;
-    if (!quiet) showMsg("O GPS não foi liberado aqui. No Google Maps, toque e segure onde você está, copie as coordenadas e cole abaixo. Depois da primeira loja, o roteiro segue a partir da última que você marcou.");
+    if (!quiet) showMsg("O GPS não foi liberado. Permita a localização para este site, ou no Google Maps toque e segure onde você está, copie as coordenadas e cole acima.");
   }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
 }
 $("gps").addEventListener("click", () => askGps(false));
@@ -354,122 +404,76 @@ $("paste").addEventListener("input", e => {
   if (!m) return;
   const lat = +m[1], lng = +m[2];
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return showMsg("Coordenadas inválidas.");
-  showMsg(""); e.target.value = ""; setOrigin(lat, lng, "localização colada"); toast("Localização definida");
+  showMsg(""); e.target.value = ""; state.origem = { lat, lng, label: "localização colada" }; save(); render();
 });
 
-// ---------- marcar visitas ----------
-function markVisited(ids, label) {
-  ids = ids.filter(id => !visited.has(id));
+// ---------- visitar, pular, desfazer ----------
+function mark(ids, kind, label) { // kind: "v" visitada, "p" pulada
+  ids = ids.filter(id => !visited.has(id) && !skipped.has(id));
   if (!ids.length) return;
-  ids.forEach(id => visited.add(id));
-  state.historico.push(ids);
+  ids.forEach(id => (kind === "v" ? visited : skipped).add(id));
+  state.historico.push({ ids, kind });
+  if (state.destino && ids.includes(state.destino)) state.destino = null;
   const p = posOf(BY_ID.get(ids[0]));
-  if (p) state.origem = { ...p, label: `última marcada: ${label}` };
-  save(); render(); toast(`${label}: marcada como visitada`);
-  if (state.gps) askGps(true); // pega a posição de novo e recalcula
+  if (p && !state.gps) state.origem = { ...p, label: `última loja: ${label}` };
+  save(); render(); toast(kind === "v" ? `${label}: visitada` : `${label}: pulada`);
 }
 $("undo").addEventListener("click", () => {
   const last = state.historico.pop();
   if (!last) return toast("Nada para desfazer");
-  last.forEach(id => visited.delete(id));
+  const { ids, kind } = Array.isArray(last) ? { ids: last, kind: "v" } : last;
+  ids.forEach(id => (kind === "v" ? visited : skipped).delete(id));
   save(); render(); toast("Desfeito");
 });
-// ---------- roteiros salvos: finalizar guarda, continuar traz de volta ----------
-const fmtData = t => new Date(t).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-const roteiroAtual = () => state.roteiros.find(r => r.id === state.atualId);
-function guardarAtual() { // salva (ou atualiza) o roteiro em andamento; false se não há visitas
-  if (!visited.size) return false;
-  const r = roteiroAtual();
-  const dados = { visitadas: [...visited], nichos: [...NSEL], data: Date.now() };
-  if (r) Object.assign(r, dados);
-  else state.roteiros.unshift({ id: Date.now(), nome: `Roteiro de ${fmtData(Date.now())}`, ...dados });
-  return true;
-}
-function limparAtual() { visited.clear(); state.historico = []; state.atualId = null }
-$("finish").addEventListener("click", () => {
-  if (!guardarAtual()) return toast("Marque pelo menos uma loja antes de salvar");
-  const nome = (roteiroAtual() || state.roteiros[0]).nome;
-  limparAtual(); save(); render(); toast(`“${nome}” salvo em Meus roteiros`);
-});
-function renderSaved() {
-  const rs = state.roteiros;
-  $("saved-list").innerHTML = rs.length ? rs.map(r => `<div class="trip${r.id === state.atualId ? " current" : ""}">
-      <input type="text" value="${esc(r.nome)}" data-rename="${r.id}" aria-label="Nome do roteiro" maxlength="60">
-      <div class="stop-meta">${fmtData(r.data)} · ${r.visitadas.length} ${r.visitadas.length === 1 ? "loja visitada" : "lojas visitadas"}${r.nichos?.length ? " · " + esc(r.nichos.join(", ")) : ""}${r.id === state.atualId ? " · em andamento" : ""}</div>
-      <div class="row">
-        ${r.id === state.atualId ? "" : `<button class="btn main" type="button" data-resume="${r.id}">Continuar</button>`}
-        <button class="btn ghost" type="button" data-del="${r.id}">Apagar</button>
-      </div></div>`).join("")
-    : `<p class="empty">Nenhum roteiro salvo ainda. Use “Finalizar e salvar” quando terminar o dia.</p>`;
-}
-$("saved").addEventListener("click", () => { renderSaved(); $("saved-dlg").showModal() });
-$("saved-close").addEventListener("click", () => $("saved-dlg").close());
-$("saved-list").addEventListener("change", e => {
-  const i = e.target.closest("[data-rename]"); if (!i) return;
-  const r = state.roteiros.find(x => x.id === +i.dataset.rename), nome = i.value.trim();
-  if (!r) return;
-  if (!nome) { i.value = r.nome; return toast("O nome não pode ficar vazio") }
-  r.nome = nome; save(); render(); toast("Nome salvo");
-});
-$("saved-list").addEventListener("click", e => {
-  const go = e.target.closest("[data-resume]");
-  if (go) {
-    const r = state.roteiros.find(x => x.id === +go.dataset.resume);
-    if (guardarAtual()) toast("O roteiro em andamento foi salvo antes de trocar");
-    limparAtual();
-    r.visitadas.forEach(id => visited.add(id)); state.atualId = r.id;
-    $("nicho").querySelectorAll("input").forEach(x => x.checked = (r.nichos || []).includes(x.value)); syncNichos();
-    save(); render(); $("saved-dlg").close(); return toast(`Continuando “${r.nome}”`);
-  }
-  const del = e.target.closest("[data-del]");
-  if (del) { // dois toques para apagar (confirm() não funciona dentro do claude.ai)
-    if (!del.dataset.armed) { del.dataset.armed = 1; del.textContent = "Toque de novo para apagar"; return }
-    const id = +del.dataset.del;
-    state.roteiros = state.roteiros.filter(x => x.id !== id);
-    if (state.atualId === id) state.atualId = null;
-    save(); render(); renderSaved(); toast("Roteiro apagado");
-  }
-});
 
-// ---------- próxima parada: galeria = uma parada ----------
-const inFilter = l => { const g = $("galeria").value;
-  return (!NSEL.size || nichos(l).some(x => NSEL.has(x))) && (!g || (g === "-" ? !l.Galeria : l.Galeria === g)) };
-
+// ---------- próxima parada: galeria = uma parada; "Ir até aqui" fura a fila ----------
 function nextStop() {
   if (!state.origem) return null;
   const stops = new Map();
   LOJAS.forEach(l => {
-    if (visited.has(l.id) || !inFilter(l)) return;
+    if (!pendente(l) || !(inFilter(l) || l.id === state.destino)) return;
     const key = l.Galeria || l.id, pos = posOf(l);
     if (!pos) return;
     (stops.get(key) || stops.set(key, { key, pos, galeria: l.Galeria, lojas: [] }).get(key)).lojas.push(l);
   });
   let best = null;
-  stops.forEach(s => { s.dist = haversine(state.origem, s.pos); if (!best || s.dist < best.dist) best = s });
+  stops.forEach(s => {
+    s.dist = haversine(state.origem, s.pos);
+    s.forced = !!state.destino && s.lojas.some(l => l.id === state.destino);
+    if (!best || (s.forced && !best.forced) || (s.forced === best.forced && s.dist < best.dist)) best = s;
+  });
   return best;
 }
 
 let currentStop = null;
 function renderRoute() {
   const s = currentStop = nextStop();
-  const total = LOJAS.filter(inFilter).length, done = LOJAS.filter(l => inFilter(l) && visited.has(l.id)).length;
-  $("progress").textContent = `${done} de ${total} visitadas` + (roteiroAtual() ? ` · ${roteiroAtual().nome}` : "");
-  $("saved").textContent = state.roteiros.length ? `Meus roteiros (${state.roteiros.length})` : "Meus roteiros";
-  $("origin-label").textContent = state.origem ? `Calculando a partir de: ${state.origem.label}` : "";
-  $("stop-actions").hidden = !s;
+  const pool = LOJAS.filter(inFilter), done = pool.filter(l => visited.has(l.id)).length;
+  const atual = roteiroAtual();
+  $("progress").textContent = `${done} de ${pool.length}` + (atual ? ` · ${atual.nome}` : "");
+  $("s-where").hidden = !!state.origem;
+  $("s-stop").hidden = !s;
+  $("s-done").hidden = !state.origem || !!s;
+  if (s) {
+    const l = s.lojas[0];
+    $("stop-name").textContent = s.galeria || l.Nome;
+    $("stop-meta").innerHTML = [fmtDist(s.dist), `${minutos(s.dist)} min`,
+      s.galeria ? `${s.lojas.length} ${s.lojas.length > 1 ? "lojas" : "loja"}` : esc(nichos(l)[0] || ""), s.galeria ? "" : statusTxt(l.Horário)].filter(Boolean).join(" · ");
+    $("arrive").textContent = s.galeria ? "Cheguei na galeria" : "Cheguei";
+  }
   updateNav(s);
-  if (!state.origem) return;
-  if (!s) { $("stop-name").textContent = "Roteiro concluído"; $("stop-meta").textContent = "Não há mais lojas pendentes com este filtro."; return }
-  const l = s.lojas[0];
-  $("stop-name").textContent = s.galeria || l.Nome;
-  $("stop-meta").innerHTML = `Próxima parada · <b>${fmtDist(s.dist)}</b> em linha reta · ` + (s.galeria
-    ? `${s.lojas.length} ${s.lojas.length > 1 ? "lojas pendentes" : "loja pendente"}`
-    : esc([nichos(l)[0], l.Endereço].filter(Boolean).join(" · ")));
-  $("stop-go").href = walkUrl(s.pos);
-  $("stop-open").hidden = !s.galeria;
-  $("stop-done").textContent = s.galeria ? "Terminei a galeria" : "Já fui";
 }
-// ---------- rota a pé dentro da página (OpenStreetMap) ----------
+$("arrive").addEventListener("click", () => {
+  const s = currentStop; if (!s) return;
+  if (s.galeria) openGaleria(s.galeria, true);
+  else mark([s.lojas[0].id], "v", s.lojas[0].Nome);
+});
+$("skip").addEventListener("click", () => {
+  const s = currentStop; if (!s) return;
+  mark(s.lojas.map(l => l.id), "p", s.galeria || s.lojas[0].Nome);
+});
+
+// ---------- mapa e rota a pé (OpenStreetMap) ----------
 function distToLine(p, cs) { // metros do ponto até a linha da rota
   const kx = 111320 * Math.cos(p.lat * Math.PI / 180), ky = 110540;
   let best = Infinity;
@@ -482,37 +486,43 @@ function distToLine(p, cs) { // metros do ponto até a linha da rota
 }
 console.assert(Math.abs(distToLine({ lat: -25.5101, lng: -54.61 }, [{ lat: -25.51, lng: -54.611 }, { lat: -25.51, lng: -54.609 }]) - 11) < 1, "distToLine");
 
-const DIR = { left: "à esquerda", right: "à direita", "slight left": "levemente à esquerda", "slight right": "levemente à direita",
-  "sharp left": "bem à esquerda", "sharp right": "bem à direita", uturn: "e volte" };
+const TURN = { left: ["vire à esquerda", -90], right: ["vire à direita", 90], "slight left": ["vire levemente à esquerda", -45],
+  "slight right": ["vire levemente à direita", 45], "sharp left": ["vire bem à esquerda", -135], "sharp right": ["vire bem à direita", 135],
+  uturn: ["faça o retorno", 180], straight: ["siga em frente", 0] };
 function instr(st) {
   const m = st.maneuver, rua = st.name ? ` na ${st.name}` : "";
-  if (m.type === "arrive") return "você chega à parada";
-  if (m.type === "roundabout" || m.type === "rotary") return `na rotatória, pegue a ${m.exit || ""}ª saída${rua}`;
-  if (!m.modifier || m.modifier === "straight") return `siga em frente${rua}`;
-  return `vire ${DIR[m.modifier]}${rua}`;
+  if (m.type === "arrive") return ["você chega à parada", 0];
+  if (m.type === "roundabout" || m.type === "rotary") return [`na rotatória, pegue a ${m.exit || ""}ª saída${rua}`, 45];
+  const [txt, deg] = TURN[m.modifier] || TURN.straight;
+  return [txt + rua, deg];
 }
 
 let map, youDot, youAcc, stopDot, routeLine, route = null, routeKey = null, routeAt = 0, arrivedKey = null;
 const canMap = () => typeof L !== "undefined" && !window.claude; // dentro do claude.ai o mapa é bloqueado
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const dark = () => matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
+
+function ensureMap() {
+  if (map || !canMap()) return;
+  map = L.map("map", { zoomControl: false }).setView([-25.5097, -54.6111], 16);
+  L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark() ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`,
+    { maxZoom: 20, subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+  routeLine = L.polyline([], { color: cssVar("--fg"), weight: 7, opacity: 0.9, lineCap: "round" }).addTo(map);
+  youAcc = L.circle([0, 0], { radius: 0, color: cssVar("--me"), weight: 1, fillOpacity: 0.12 }).addTo(map);
+  youDot = L.circleMarker([0, 0], { radius: 9, color: "#ffffff", weight: 4, fillColor: cssVar("--me"), fillOpacity: 1 }).addTo(map);
+  stopDot = L.marker([0, 0], { icon: L.divIcon({ className: "", iconSize: [22, 22],
+    html: `<div style="width:22px;height:22px;border-radius:5px;background:${cssVar("--fg")};border:3px solid ${cssVar("--bg")}"></div>` }) }).addTo(map);
+}
 
 function updateNav(s) {
-  const show = !!(s && state.origem && canMap());
-  const wasHidden = $("nav").hidden;
-  $("nav").hidden = !show;
-  if (!show) return;
-  if (!map) {
-    map = L.map("map", { zoomControl: false });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
-    routeLine = L.polyline([], { color: cssVar("--accent"), weight: 6, opacity: 0.9 }).addTo(map);
-    youAcc = L.circle([0, 0], { radius: 0, color: "#2a7de1", weight: 1, fillOpacity: 0.12 }).addTo(map);
-    youDot = L.circleMarker([0, 0], { radius: 8, color: "#ffffff", weight: 3, fillColor: "#2a7de1", fillOpacity: 1 }).addTo(map);
-    stopDot = L.circleMarker([0, 0], { radius: 11, color: "#ffffff", weight: 3, fillColor: "#d1495b", fillOpacity: 1 }).addTo(map);
-  } else if (wasHidden) map.invalidateSize();
-  youDot.setLatLng([state.origem.lat, state.origem.lng]);
-  youAcc.setLatLng([state.origem.lat, state.origem.lng]).setRadius(state.origem.acc || 0);
-  stopDot.setLatLng([s.pos.lat, s.pos.lng]).bindTooltip(s.galeria || s.lojas[0].Nome);
-  if (state.gps && s.dist < 30 && arrivedKey !== s.key) { // "cheguei": raio de 30 m, GPS erra entre prédios
+  ensureMap();
+  if (!map || !state.origem) { $("banner").hidden = true; return }
+  const me = [state.origem.lat, state.origem.lng];
+  youDot.setLatLng(me); youAcc.setLatLng(me).setRadius(state.origem.acc || 0);
+  if (!s) { $("banner").hidden = true; routeLine.setLatLngs([]); stopDot.setOpacity(0); map.setView(me, 17); routeKey = null; return }
+  stopDot.setOpacity(1).setLatLng([s.pos.lat, s.pos.lng]);
+  $("banner").hidden = false;
+  if (state.gps && s.dist < 30 && arrivedKey !== s.key) { // "cheguei": raio de 30 m, o GPS erra entre prédios
     arrivedKey = s.key; navigator.vibrate?.([200, 100, 200]);
     toast(`Você chegou: ${s.galeria || s.lojas[0].Nome}`);
   }
@@ -524,7 +534,7 @@ function updateNav(s) {
 async function fetchRoute(s) {
   routeKey = s.key; routeAt = Date.now(); route = null;
   const o = state.origem;
-  $("step").innerHTML = "Calculando a rota a pé…";
+  setBanner("…", "calculando a rota a pé", 0);
   try {
     const r = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${o.lng},${o.lat};${s.pos.lng},${s.pos.lat}?overview=full&geometries=geojson&steps=true`).then(r => r.json());
     if (r.code !== "Ok") throw new Error(r.code);
@@ -538,95 +548,95 @@ async function fetchRoute(s) {
     routeLine.setStyle({ dashArray: null }).setLatLngs(coords.map(c => [c.lat, c.lng]));
   } catch {
     if (routeKey !== s.key) return;
-    route = null; // sem rota: linha reta tracejada, o botão "Ir a pé" continua valendo
-    routeLine.setStyle({ dashArray: "6 10" }).setLatLngs([[o.lat, o.lng], [s.pos.lat, s.pos.lng]]);
+    route = null; // sem rota: linha reta tracejada até a loja
+    routeLine.setStyle({ dashArray: "2 12" }).setLatLngs([[o.lat, o.lng], [s.pos.lat, s.pos.lng]]);
   }
-  map.fitBounds(L.latLngBounds([routeLine.getLatLngs(), [o.lat, o.lng], [s.pos.lat, s.pos.lng]].flat()), { padding: [30, 30], maxZoom: 18 });
+  const sheetH = $("sheet").offsetHeight, topH = $("banner").offsetHeight + 20;
+  map.fitBounds(L.latLngBounds([...routeLine.getLatLngs(), [o.lat, o.lng], [s.pos.lat, s.pos.lng]]),
+    { paddingTopLeft: [30, topH + 30], paddingBottomRight: [30, sheetH + 20], maxZoom: 18 });
   renderStep();
 }
-
+function setBanner(dist, text, deg) {
+  $("turn-dist").textContent = dist; $("turn-text").textContent = text; $("arrow").style.transform = `rotate(${deg}deg)`;
+}
 function renderStep() {
-  if (!route) { $("step").innerHTML = `Sem rota a pé agora. Siga a linha tracejada ou toque em “Ir a pé”.<small>${fmtDist(currentStop.dist)} em linha reta</small>`; return }
+  if (!currentStop) return;
+  if (!route) return setBanner(fmtDist(currentStop.dist), "em linha reta (sem rota agora)", 0);
   const me = state.origem, k = route.near(me);
   const next = route.steps.find((x, i) => i > 0 && x.at > k) || route.steps[route.steps.length - 1];
-  const left = route.cum[route.cum.length - 1] - route.cum[k] + haversine(me, route.coords[k]);
-  const toTurn = haversine(me, { lat: next.st.maneuver.location[1], lng: next.st.maneuver.location[0] });
-  $("step").innerHTML = `<b>Em ${fmtDist(toTurn)}</b>, ${esc(instr(next.st))}<small>Faltam ${fmtDist(left)} a pé · cerca de ${Math.max(1, Math.round(left / 75))} min</small>`;
+  const [txt, deg] = instr(next.st);
+  setBanner(fmtDist(haversine(me, { lat: next.st.maneuver.location[1], lng: next.st.maneuver.location[0] })), txt, deg);
 }
-
-$("stop-open").addEventListener("click", () => currentStop && openGaleria(currentStop.galeria));
-$("stop-done").addEventListener("click", () => currentStop && markVisited(currentStop.lojas.map(l => l.id), currentStop.galeria || currentStop.lojas[0].Nome));
 
 // ---------- galeria: lojas por andar ----------
 const floorRank = a => a === "Térreo" ? 0 : a === "Subsolo" ? -1 : /^\d+/.test(a) ? parseInt(a) : a ? 50 : 99;
 let openGal = null;
-function openGaleria(g) { openGal = g; renderSheet(); if (!$("sheet").open) $("sheet").showModal() }
-function renderSheet() {
+function openGaleria(g, chegou) {
+  openGal = g; $("gal-kicker").textContent = chegou ? "Você chegou" : "Galeria";
+  renderGal(); if (!$("gal-dlg").open) $("gal-dlg").showModal();
+}
+function renderGal() {
   if (!openGal) return;
   const ls = GALERIAS.get(openGal).filter(inFilter);
-  const pend = ls.filter(l => !visited.has(l.id)).length;
-  $("sheet-h").textContent = openGal;
-  $("sheet-meta").textContent = `${pend} de ${ls.length} ${ls.length > 1 ? "lojas" : "loja"} pendentes` + (NSEL.size ? ` · ${[...NSEL].join(", ")}` : "")
-    + (state.origem && GAL_POS.get(openGal) ? ` · ${fmtDist(haversine(state.origem, GAL_POS.get(openGal)))}` : "");
-  const pos = GAL_POS.get(openGal);
-  $("sheet-go").hidden = !pos; if (pos) $("sheet-go").href = walkUrl(pos);
+  const pend = ls.filter(pendente).length;
+  $("gal-h").textContent = openGal;
+  $("gal-meta").textContent = `${pend} de ${ls.length} ${ls.length > 1 ? "lojas" : "loja"} pendentes` + (NSEL.size ? ` · ${[...NSEL].join(", ")}` : "");
   const floors = new Map();
   [...ls].sort((a, b) => floorRank(a.Andar) - floorRank(b.Andar) || a.Nome.localeCompare(b.Nome, "pt"))
     .forEach(l => (floors.get(l.Andar) || floors.set(l.Andar, []).get(l.Andar)).push(l));
-  $("sheet-list").innerHTML = [...floors].map(([andar, items]) => `<h3 class="floor-h">${esc(andar || "Andar não informado")}</h3>` +
-    items.map(l => `<div class="shop${visited.has(l.id) ? " done" : ""}"><div><b>${esc(l.Nome)}</b><small>${esc([nichos(l)[0], l.Box && "Box " + l.Box].filter(Boolean).join(" · "))}</small></div>` +
-      (visited.has(l.id) ? `<small>visitada</small>` : `<button class="btn ghost" type="button" data-visit="${esc(l.id)}">Já fui</button>`) + `</div>`).join("")).join("")
-    || `<p class="empty">Nenhuma loja desta galeria no filtro atual.</p>`;
+  $("gal-list").innerHTML = [...floors].map(([andar, items]) => `<h3 class="floor-h">${esc(andar || "Andar não informado")}</h3>` +
+    items.map(l => `<div class="shop${pendente(l) ? "" : " done"}"><div><b>${esc(l.Nome)}</b><small>${esc([nichos(l)[0], l.Box && "Box " + l.Box].filter(Boolean).join(" · "))}</small></div>` +
+      (visited.has(l.id) ? `<small>visitada</small>` : skipped.has(l.id) ? `<small>pulada</small>` : `<button class="btn dark" type="button" data-visit="${esc(l.id)}">Já fui</button>`) + `</div>`).join("")).join("")
+    || `<p class="empty">Nenhuma loja desta galeria nos nichos escolhidos.</p>`;
 }
-$("sheet-list").addEventListener("click", e => { const b = e.target.closest("[data-visit]"); if (b) markVisited([b.dataset.visit], BY_ID.get(b.dataset.visit).Nome) });
-$("sheet-all").addEventListener("click", () => { markVisited(GALERIAS.get(openGal).filter(inFilter).map(l => l.id), openGal); $("sheet").close() });
-$("sheet-close").addEventListener("click", () => $("sheet").close());
-$("sheet").addEventListener("close", () => openGal = null);
+$("gal-list").addEventListener("click", e => { const b = e.target.closest("[data-visit]"); if (b) mark([b.dataset.visit], "v", BY_ID.get(b.dataset.visit).Nome) });
+$("gal-leave").addEventListener("click", () => { // o que sobrou da galeria fica como pulado; a próxima parada sai daqui
+  const g = openGal, rest = GALERIAS.get(g).filter(l => inFilter(l) && pendente(l)).map(l => l.id);
+  const p = GAL_POS.get(g);
+  if (p && !state.gps) state.origem = { ...p, label: `saída de ${g}` };
+  $("gal-dlg").close();
+  rest.length ? mark(rest, "p", g) : (save(), render());
+});
+$("gal-dlg").addEventListener("close", () => openGal = null);
 
-// ---------- lista ----------
-const pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
-
-function card(l) {
+// ---------- detalhe da loja ----------
+let openShop = null;
+function openLoja(id) {
+  const l = openShop = BY_ID.get(id); if (!l) return;
+  $("shop-nicho").textContent = l.Nicho || "";
+  $("shop-h").textContent = l.Nome;
+  const dist = state.origem && posOf(l) ? fmtDist(haversine(state.origem, posOf(l))) : "";
+  $("shop-where").innerHTML = [esc(l.Galeria || "Loja de rua"), esc(l.Andar), l.Box && "Box " + esc(l.Box), dist].filter(Boolean).join(" · ");
   const rows = [
     l.Endereço && ["Rua", esc(l.Endereço)],
-    l.Horário && ["Horário", esc(l.Horário).replace(/; /g, "<br>")],
+    l.Horário && ["Horário", esc(l.Horário).replace(/; /g, "<br>") + (statusTxt(l.Horário) ? `<br>${statusTxt(l.Horário)}` : "")],
     l.Telefone && ["Telefone", `<a href="tel:${esc(l.Telefone.replace(/[^\d+]/g, ""))}">${esc(l.Telefone)}</a>`],
-    l.WhatsApp && ["WhatsApp", `<a class="wa" href="https://wa.me/${esc(l.WhatsApp)}" target="_blank" rel="noopener">+${esc(l.WhatsApp)}</a>`],
+    l.WhatsApp && ["WhatsApp", `<a href="https://wa.me/${esc(l.WhatsApp)}" target="_blank" rel="noopener">+${esc(l.WhatsApp)}</a>`],
+    l.Observação && ["Obs.", esc(l.Observação)],
   ].filter(Boolean);
-  const dist = state.origem && posOf(l) ? `<span class="dist">${fmtDist(haversine(state.origem, posOf(l)))}</span>` : "";
-  const where = l.Galeria
-    ? `<div class="where"><button class="gal" type="button" data-gal="${esc(l.Galeria)}">${esc(l.Galeria)}</button>${l.Andar ? `<span class="floor">${esc(l.Andar)}</span>` : ""}${l.Box ? `<span class="floor">Box ${esc(l.Box)}</span>` : ""}${dist}</div>`
-    : `<div class="where">Loja de rua${dist}</div>`;
-  return `<article class="card">
-    <div class="top"><h2 class="name">${esc(l.Nome)}</h2>${l.Nicho ? `<span class="nicho" title="${esc(l.Nicho)}">${esc(nichos(l)[0])}</span>` : ""}</div>
-    ${where}
-    ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : ""}
-    ${l.Observação || l.criada ? `<div class="note">${esc(l.Observação)}${l.criada ? ` <button class="link danger" type="button" data-remove="${esc(l.id)}">Remover</button>` : ""}</div>` : ""}
-    <div class="actions">
-      <button class="btn ghost" type="button" data-copy="${esc(l.id)}">Copiar</button>
-      <a class="btn main" href="${esc(mapsUrl(l))}" target="_blank" rel="noopener">${pin}Maps</a>
-      <button class="btn soft" type="button" data-visit="${esc(l.id)}">Já fui</button>
-    </div>
-  </article>`;
+  $("shop-info").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  $("shop-info").hidden = !rows.length;
+  $("shop-visit").textContent = visited.has(l.id) ? "Visitada" : "Já fui";
+  $("shop-visit").disabled = visited.has(l.id);
+  $("shop-go").hidden = !posOf(l) || visited.has(l.id);
+  $("shop-gal").hidden = !l.Galeria;
+  const rm = $("shop-remove"); rm.hidden = !l.criada; rm.textContent = "Remover esta loja"; delete rm.dataset.armed;
+  if (!$("shop-dlg").open) $("shop-dlg").showModal();
 }
-
-function render() {
-  const words = norm($("q").value).split(/\s+/).filter(Boolean);
-  let shown = LOJAS.filter(l => !visited.has(l.id) && inFilter(l) && words.every(w => l._q.includes(w)));
-  if (state.origem) { // com origem: mais perto primeiro; sem coordenada vai para o fim
-    const d = l => posOf(l) ? haversine(state.origem, posOf(l)) : Infinity;
-    shown = shown.map(l => [d(l), l]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-  }
-  // shortcut: desenha só os 150 primeiros (celular trava com 1.300 cards); a busca acha o resto
-  $("list").innerHTML = shown.length ? shown.slice(0, 150).map(card).join("")
-    : `<p class="empty">Nenhuma loja encontrada. Tente parte do nome, sem acento.</p>`;
-  $("count").textContent = `${shown.length} lojas` + (shown.length > 150 ? " (mostrando 150, busque para achar outras)" : "") + (visited.size ? ` · ${LOJAS.filter(l => visited.has(l.id)).length} visitadas escondidas` : "") + (state.origem ? " · mais perto primeiro" : "");
-  renderRoute(); renderSheet();
-  try { localStorage.setItem("filtros", JSON.stringify({ q: $("q").value, n: [...NSEL], g: $("galeria").value })) } catch {}
-}
-
-let toastTimer;
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200) }
+$("shop-go").addEventListener("click", () => { // vira a próxima parada, mesmo fora do filtro
+  skipped.delete(openShop.id); state.destino = openShop.id; save(); $("shop-dlg").close(); switchTab("v-rota"); render();
+});
+$("shop-visit").addEventListener("click", () => { mark([openShop.id], "v", openShop.Nome); openLoja(openShop.id) });
+$("shop-copy").addEventListener("click", () => copyText(fullAddress(openShop), "Endereço copiado"));
+$("shop-gal").addEventListener("click", () => { const g = openShop.Galeria; $("shop-dlg").close(); openGaleria(g) });
+$("shop-remove").addEventListener("click", e => { // dois toques (confirm() não funciona dentro do claude.ai)
+  const b = e.currentTarget;
+  if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = "Toque de novo para remover"; return }
+  state.extras = state.extras.filter(x => "extra|" + x.criada !== openShop.id);
+  visited.delete(openShop.id); skipped.delete(openShop.id);
+  $("shop-dlg").close(); reindex(); save(); render(); toast("Loja removida");
+});
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
 
 function copyText(text, okMsg) {
   const fallback = () => { // clipboard recusado: tenta o método antigo; se falhar, mostra o texto
@@ -640,7 +650,7 @@ function copyText(text, okMsg) {
 
 // ---------- adicionar loja na posição atual ----------
 let addPos = null;
-function openAdd() {
+$("add").addEventListener("click", () => {
   addPos = null; $("add-form").reset(); $("add-save").disabled = true;
   $("add-pos").textContent = "Pegando sua localização…";
   $("add-dlg").showModal(); $("add-nome").focus();
@@ -652,13 +662,11 @@ function openAdd() {
     if (best && !$("add-gal").value) $("add-gal").value = best.g;
   };
   const fallback = () => state.origem ? use(state.origem.lat, state.origem.lng, state.origem.label)
-    : ($("add-pos").textContent = "Sem localização. Libere o GPS ou cole sua localização no topo da página e tente de novo.");
+    : ($("add-pos").textContent = "Sem localização. Libere o GPS na aba Roteiro e tente de novo.");
   if (!navigator.geolocation) return fallback();
   navigator.geolocation.getCurrentPosition(p => use(p.coords.latitude, p.coords.longitude, `GPS agora (±${Math.round(p.coords.accuracy)} m)`),
     fallback, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
-}
-$("add").addEventListener("click", openAdd);
-$("add-close").addEventListener("click", () => $("add-dlg").close());
+});
 $("add-form").addEventListener("submit", e => {
   e.preventDefault();
   const nome = $("add-nome").value.trim();
@@ -673,23 +681,103 @@ $("export").addEventListener("click", () => copyText( // linhas no formato de da
   [COLS, ...state.extras.map(e => COLS.map(c => String(e[c] ?? "").replace(/[;\n]/g, " ")))].map(r => r.join(";")).join("\n"),
   "Copiado. Cole em dados/lojas_extras.csv no computador"));
 
-$("list").addEventListener("click", e => {
-  const rm = e.target.closest("[data-remove]");
-  if (rm) { // dois toques para remover (confirm() não funciona dentro do claude.ai)
-    if (!rm.dataset.armed) { rm.dataset.armed = 1; rm.textContent = "Toque de novo para remover"; return }
-    state.extras = state.extras.filter(x => "extra|" + x.criada !== rm.dataset.remove);
-    visited.delete(rm.dataset.remove); reindex(); save(); render(); return toast("Loja removida");
+// ---------- roteiros salvos ----------
+const fmtData = t => new Date(t).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const roteiroAtual = () => state.roteiros.find(r => r.id === state.atualId);
+function guardarAtual() { // salva (ou atualiza) o roteiro em andamento; false se não há nada marcado
+  if (!visited.size && !skipped.size) return false;
+  const r = roteiroAtual();
+  const dados = { visitadas: [...visited], puladas: [...skipped], nichos: [...NSEL], data: Date.now() };
+  if (r) Object.assign(r, dados);
+  else state.roteiros.unshift({ id: Date.now(), nome: `Roteiro de ${fmtData(Date.now())}`, ...dados });
+  return true;
+}
+function limparAtual() { visited.clear(); skipped.clear(); state.historico = []; state.atualId = null; state.destino = null }
+$("finish").addEventListener("click", () => {
+  if (!guardarAtual()) return toast("Marque pelo menos uma loja antes de salvar");
+  const nome = (roteiroAtual() || state.roteiros[0]).nome;
+  limparAtual(); save(); render(); toast(`“${nome}” salvo em Roteiros`);
+});
+function renderSaved() {
+  const atual = roteiroAtual();
+  $("current").innerHTML = `<div class="meta">Em andamento${atual ? ` · ${esc(atual.nome)}` : ""}</div>
+    <h2>${visited.size} ${visited.size === 1 ? "loja visitada" : "lojas visitadas"}</h2>
+    <button class="btn dark" type="button" data-finish>Finalizar e salvar</button>`;
+  const rs = state.roteiros.filter(r => r.id !== state.atualId);
+  $("saved-list").innerHTML = rs.length ? rs.map(r => `<div class="trip">
+      <input type="text" value="${esc(r.nome)}" data-rename="${r.id}" aria-label="Nome do roteiro" maxlength="60">
+      <div class="meta">${fmtData(r.data)} · ${r.visitadas.length} ${r.visitadas.length === 1 ? "loja visitada" : "lojas visitadas"}${r.nichos?.length ? " · " + esc(r.nichos.join(", ")) : ""}</div>
+      <div class="row"><button class="btn dark" type="button" data-resume="${r.id}">Continuar</button>
+        <button class="btn grey" type="button" data-del="${r.id}">Apagar</button></div></div>`).join("")
+    : `<p class="empty">Nenhum roteiro salvo ainda. Quando terminar o dia, toque em “Finalizar e salvar”.</p>`;
+}
+$("current").addEventListener("click", e => { if (e.target.closest("[data-finish]")) $("finish").click() });
+$("saved-list").addEventListener("change", e => {
+  const i = e.target.closest("[data-rename]"); if (!i) return;
+  const r = state.roteiros.find(x => x.id === +i.dataset.rename), nome = i.value.trim();
+  if (!r) return;
+  if (!nome) { i.value = r.nome; return toast("O nome não pode ficar vazio") }
+  r.nome = nome; save(); render(); toast("Nome salvo");
+});
+$("saved-list").addEventListener("click", e => {
+  const go = e.target.closest("[data-resume]");
+  if (go) {
+    const r = state.roteiros.find(x => x.id === +go.dataset.resume);
+    if (guardarAtual()) toast("O roteiro em andamento foi salvo antes de trocar");
+    limparAtual();
+    r.visitadas.forEach(id => visited.add(id)); (r.puladas || []).forEach(id => skipped.add(id)); state.atualId = r.id;
+    setNichos(r.nichos || []);
+    save(); render(); switchTab("v-rota"); return toast(`Continuando “${r.nome}”`);
   }
-  const gal = e.target.closest("[data-gal]"); if (gal) return openGaleria(gal.dataset.gal);
-  const v = e.target.closest("[data-visit]"); if (v) return markVisited([v.dataset.visit], BY_ID.get(v.dataset.visit).Nome);
-  const b = e.target.closest("[data-copy]"); if (!b) return;
-  copyText(fullAddress(BY_ID.get(b.dataset.copy)), "Endereço copiado");
+  const del = e.target.closest("[data-del]");
+  if (del) { // dois toques para apagar
+    if (!del.dataset.armed) { del.dataset.armed = 1; del.textContent = "Toque de novo"; return }
+    state.roteiros = state.roteiros.filter(x => x.id !== +del.dataset.del);
+    save(); render(); toast("Roteiro apagado");
+  }
 });
 
+// ---------- lista de lojas ----------
+const ICON_STORE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10M19 21V10M4 7l2-4h12l2 4M4 7h16v1a3 3 0 0 1-6 0 3 3 0 0 1-4 0 3 3 0 0 1-6 0z"/></svg>';
+const ICON_GAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M9 7h1M14 7h1M9 11h1M14 11h1M10 21v-4h4v4"/></svg>';
+function render() {
+  const words = norm($("q").value).split(/\s+/).filter(Boolean);
+  let shown = LOJAS.filter(l => !visited.has(l.id) && inFilter(l) && words.every(w => l._q.includes(w)));
+  if (state.origem) { // com posição: mais perto primeiro; sem coordenada vai para o fim
+    const d = l => posOf(l) ? haversine(state.origem, posOf(l)) : Infinity;
+    shown = shown.map(l => [d(l), l]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  }
+  // shortcut: desenha só os 150 primeiros (celular trava com centenas de linhas); a busca acha o resto
+  $("list").innerHTML = shown.length ? shown.slice(0, 150).map(l => {
+    const dist = state.origem && posOf(l) ? fmtDist(haversine(state.origem, posOf(l))) : "";
+    const sub = [nichos(l)[0], l.Galeria ? [l.Galeria, l.Andar].filter(Boolean).join(", ") : "loja de rua",
+      abertaAgora(l.Horário) === false ? "fechada agora" : "", skipped.has(l.id) ? "pulada" : ""].filter(Boolean).join(" · ");
+    return `<button class="item" type="button" data-shop="${esc(l.id)}"><span class="ico">${l.Galeria ? ICON_GAL : ICON_STORE}</span>
+      <span class="t"><b>${esc(l.Nome)}</b><small>${esc(sub)}</small></span><span class="d">${dist}</span></button>`;
+  }).join("") : `<p class="empty">Nenhuma loja encontrada. Tente parte do nome, sem acento.</p>`;
+  $("count").textContent = `${shown.length} ${shown.length === 1 ? "loja" : "lojas"}` + (shown.length > 150 ? " · mostrando as 150 mais perto" : "")
+    + (visited.size ? ` · ${visited.size} ${visited.size === 1 ? "visitada escondida" : "visitadas escondidas"}` : "");
+  renderRoute(); renderGal(); renderSaved();
+  try { localStorage.setItem("filtros", JSON.stringify({ q: $("q").value, n: [...NSEL], g: $("galeria").value })) } catch {}
+}
+$("list").addEventListener("click", e => { const b = e.target.closest("[data-shop]"); if (b) openLoja(b.dataset.shop) });
 ["q", "galeria"].forEach(id => $(id).addEventListener("input", render));
+
+// ---------- abas ----------
+function switchTab(id) {
+  document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== id);
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === id));
+  if (id === "v-rota" && map) setTimeout(() => map.invalidateSize(), 0);
+}
+document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2400) }
+
 try {
   const f = JSON.parse(localStorage.getItem("filtros") || "{}");
-  $("q").value = f.q || ""; [].concat(f.n || []).forEach(v => { const i = [...$("nicho").querySelectorAll("input")].find(x => x.value === v); if (i) i.checked = true }); syncNichos(); $("galeria").value = f.g || "";
+  $("q").value = f.q || ""; $("galeria").value = f.g || ""; setNichos([].concat(f.n || []));
 } catch {}
 render();
+if (state.gps) askGps(true); // já tinha liberado o GPS antes: volta a seguir sozinho
 </script>
