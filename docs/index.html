@@ -87,6 +87,10 @@ h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; line
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: var(--surface); border-radius: 22px 22px 0 0;
   box-shadow: 0 -6px 24px rgb(0 0 0 / 0.12); display: grid; gap: 12px;
   padding: 10px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px)) }
+.recenter { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: -60px; width: 48px; height: 48px;
+  border-radius: 50%; border: 0; background: var(--surface); color: var(--fg); display: grid; place-items: center;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.18) }
+.recenter svg { width: 24px; height: 24px }
 .grab { width: 38px; height: 4px; border-radius: 9px; background: var(--line); margin: 0 auto 2px }
 .stack { display: grid; gap: 12px }
 .stack[hidden] { display: none }
@@ -94,12 +98,14 @@ h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; line
 .msg { font-size: 14px; color: var(--fg); background: var(--raised); border-radius: 12px; padding: 10px 12px }
 
 /* lojas */
-.search-wrap { position: sticky; top: 0; z-index: 3; background: var(--bg); display: grid; gap: 10px;
+.search-wrap { position: sticky; top: 0; z-index: 3; background: var(--bg); display: grid; gap: 10px; border-bottom: 1px solid var(--line);
   padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)) }
 .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px }
 .chips::-webkit-scrollbar { display: none }
 .chips button { flex: none; border: 0; border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 700;
   background: var(--raised); color: var(--fg); white-space: nowrap; min-height: 40px }
+.chips select { flex: none; width: 150px; text-overflow: ellipsis; border: 1.5px solid var(--fg); border-radius: 999px; padding: 8px 12px; font-size: 14px;
+  font-weight: 700; background: var(--surface); min-height: 40px }
 .chips button[aria-pressed="true"] { background: var(--btn); color: var(--btn-fg) }
 .list { padding: 0 max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px)) }
 .item { display: flex; gap: 12px; align-items: center; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line);
@@ -167,6 +173,9 @@ dd a { color: var(--fg); font-weight: 700 }
       </div>
     </div>
     <div class="sheet" id="sheet">
+      <button class="recenter" type="button" id="recenter" aria-label="Centralizar no mapa" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
       <div class="grab"></div>
       <div class="stack" id="s-where" hidden>
         <h2>Onde você está?</h2>
@@ -179,8 +188,10 @@ dd a { color: var(--fg); font-weight: 700 }
           <h2 id="stop-name"></h2>
           <div class="meta" id="stop-meta"></div>
         </div>
-        <button class="btn big dark" type="button" id="arrive">Cheguei</button>
-        <button class="btn grey" type="button" id="skip">Pular</button>
+        <div class="row">
+          <button class="btn big grey" type="button" id="skip" style="flex:1">Pular</button>
+          <button class="btn big dark" type="button" id="arrive" style="flex:2">Cheguei</button>
+        </div>
       </div>
       <div class="stack" id="s-done" hidden>
         <h2>Roteiro concluído</h2>
@@ -195,10 +206,12 @@ dd a { color: var(--fg); font-weight: 700 }
 
   <section class="view" id="v-lojas" aria-label="Lojas" hidden>
     <div class="search-wrap">
-      <h1>jaha</h1>
+      <div class="brand">jaha<span class="flag" role="img" aria-label="Bandeira do Paraguai"></span></div>
       <input class="field" id="q" type="search" placeholder="Buscar loja, galeria ou rua" aria-label="Buscar loja" autocomplete="off">
-      <div class="chips" id="chips" role="group" aria-label="Nichos"></div>
-      <select class="field" id="galeria" aria-label="Filtrar por galeria"><option value="">Todas as galerias</option><option value="-">Só lojas de rua</option></select>
+      <div class="chips">
+        <select id="galeria" aria-label="Filtrar por galeria"><option value="">Todas as galerias</option><option value="-">Só lojas de rua</option></select>
+        <span id="chips" role="group" aria-label="Nichos" style="display:contents"></span>
+      </div>
       <div class="count" id="count" aria-live="polite"></div>
     </div>
     <div class="list" id="list"></div>
@@ -209,7 +222,7 @@ dd a { color: var(--fg); font-weight: 700 }
 
   <section class="view" id="v-salvos" aria-label="Roteiros salvos" hidden>
     <div class="pad" style="display:grid;gap:16px">
-      <h1>Roteiros</h1>
+      <div class="brand">Roteiros</div>
       <div class="card" id="current"></div>
       <div id="saved-list"></div>
       <button class="link" type="button" id="export" hidden>Copiar lojas que você adicionou</button>
@@ -376,7 +389,8 @@ function save() {
 
 // ---------- filtros: nichos (vários) e galeria ----------
 let NSEL = new Set();
-$("chips").innerHTML = [...new Set(BASE.flatMap(nichos))].sort((a, b) => a.localeCompare(b, "pt"))
+const NCOUNT = BASE.flatMap(nichos).reduce((m, n) => m.set(n, (m.get(n) || 0) + 1), new Map());
+$("chips").innerHTML = [...NCOUNT.keys()].sort((a, b) => NCOUNT.get(b) - NCOUNT.get(a) || a.localeCompare(b, "pt"))
   .map(v => `<button type="button" aria-pressed="false" data-n="${esc(v)}">${esc(v)}</button>`).join("");
 function setNichos(list) {
   NSEL = new Set(list);
@@ -528,6 +542,7 @@ function ensureMap() {
 
 function updateNav(s) {
   ensureMap();
+  $("recenter").hidden = !map || !state.origem;
   if (!map || !state.origem) { $("banner").hidden = true; return }
   const me = [state.origem.lat, state.origem.lng];
   youDot.setLatLng(me); youAcc.setLatLng(me).setRadius(state.origem.acc || 0);
@@ -563,11 +578,17 @@ async function fetchRoute(s) {
     route = null; // sem rota: linha reta tracejada até a loja
     routeLine.setStyle({ dashArray: "2 12" }).setLatLngs([[o.lat, o.lng], [s.pos.lat, s.pos.lng]]);
   }
-  const sheetH = $("sheet").offsetHeight, topH = $("banner").offsetHeight + 20;
-  map.fitBounds(L.latLngBounds([...routeLine.getLatLngs(), [o.lat, o.lng], [s.pos.lat, s.pos.lng]]),
-    { paddingTopLeft: [30, topH + 30], paddingBottomRight: [30, sheetH + 20], maxZoom: 18 });
+  fitRoute();
   renderStep();
 }
+function fitRoute() { // enquadra você, a rota e a loja entre a barra de cima e o painel de baixo
+  const o = state.origem, s = currentStop; if (!map || !o) return;
+  const top = $("v-rota").querySelector(".over.top").offsetHeight + 16, bottom = $("sheet").offsetHeight + 16;
+  if (!s) return map.setView([o.lat, o.lng], 17);
+  map.fitBounds(L.latLngBounds([...routeLine.getLatLngs(), [o.lat, o.lng], [s.pos.lat, s.pos.lng]]),
+    { paddingTopLeft: [30, top], paddingBottomRight: [30, bottom], maxZoom: 18 });
+}
+$("recenter").addEventListener("click", fitRoute);
 function setBanner(dist, text, deg) {
   $("turn-dist").textContent = dist; $("turn-text").textContent = text; $("arrow").style.transform = `rotate(${deg}deg)`;
 }
