@@ -1,0 +1,95 @@
+# Lojas sem coordenada (1)
+
+- Centurion — Av. Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/centurion/ 
+
+# Lojas sem galeria (89) — lojas de rua ou endereço incompleto
+
+- Flytec Computers — Av. Dr. Eusebio Ayala, Edifício Flytec (NOVA LOJA) — https://www.comprasparaguai.com.br/lojas/flytec-computers/
+- GenZ Atacado — Rua Boqueron — https://www.comprasparaguai.com.br/lojas/genz-atacado/
+- MultiPass — Av. Monseñor Rodriguez, 1022 — https://www.comprasparaguai.com.br/lojas/multipass/
+- La Petisquera — Av. Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/la-petisquera/
+- La Petisquera — Av. Monseñor Rodriguez, 810 — https://www.comprasparaguai.com.br/lojas/la-petisquera/
+- Mega Eletrônicos — Av. Monseñor Rodriguez, Esquina Itá Ybaté — https://www.comprasparaguai.com.br/lojas/mega-eletronicos/
+- Pontocom — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/pontocom/
+- Atacado Collections — Av. Luis Maria Argaña — https://www.comprasparaguai.com.br/lojas/atacado-collections/
+- Macedonia — Av. Monseñor Rodriguez, 1018 — https://www.comprasparaguai.com.br/lojas/macedonia/
+- Império Pneus — Rua Camilo Recalde, 7000 — https://www.comprasparaguai.com.br/lojas/imperio-pneus/
+- DAC Pneus — Rua Camilo Recalde, Com Concejal Aniceto Ruiz — https://www.comprasparaguai.com.br/lojas/dac-pneus/
+- DAC Pneus — Av. San Blás, Km 1.5 -- Sala 525 — https://www.comprasparaguai.com.br/lojas/dac-pneus/
+- Rio Parana Importadora — Rua Regimento Piribebuy — https://www.comprasparaguai.com.br/lojas/rio-parana-importadora/
+- O.MA — Av. Adrián Jara, 3213 — https://www.comprasparaguai.com.br/lojas/oma/
+- Renova Padel — Rua Nanawa, Loja Com Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/renova-padel/
+- Marktronic Comunicação — Av. Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/marktronic-comunicacao/
+- Bess Audio & Vídeo — Av. Carlos Antonio López, Com Av. Carlos Antonio López — https://www.comprasparaguai.com.br/lojas/bess-audio-video/
+- Mega Eletro — Av. Monseñor Rodriguez, Esquina com Avda. Rubio Ñu — https://www.comprasparaguai.com.br/lojas/mega-eletro/
+- Monalisa — Av. Monseñor Rodriguez, Com Carlos Antonio López, 654 — https://www.comprasparaguai.com.br/lojas/monalisa/
+- Xiaomi Zone — Av. Luis Maria Argaña — https://www.comprasparaguai.com.br/lojas/xiaomi-zone/
+- Columbia Farmacias — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/columbia-farmacias/
+- 8 de Agosto — Av. Adrián Jara, Esq/ Rubio Ñú — https://www.comprasparaguai.com.br/lojas/8-de-agosto/
+- Roma Shopping — Rua Camilo Recalde, Nº 2051, Esq. com Rua Coronel Toledo — https://www.comprasparaguai.com.br/lojas/roma-shopping/
+- La Moneda — Super Carretera - Av. Mariscal Francisco Solano López, Com Monsenor Rodriguez, KM 4 — https://www.comprasparaguai.com.br/lojas/la-moneda/
+- NGP Farma — Rubio NU — https://www.comprasparaguai.com.br/lojas/ngp-farma/
+- Terra Nova — Av. Emiliano R. Fernández — https://www.comprasparaguai.com.br/lojas/terra-nova/
+- Farma10 — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/farma10/
+- SAX — Av. San Blás — https://www.comprasparaguai.com.br/lojas/sax/
+- Farmacia Santa Rita — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/farmacia-santa-rita/
+- Senki Electronica — Av. Monseñor Rodriguez, Nº 805 — https://www.comprasparaguai.com.br/lojas/senki-electronica/
+- Farmácia Amada — Rua Coronel Toledo, Com Emiliano R. Fernandez — https://www.comprasparaguai.com.br/lojas/farmacia-amada/
+- Farmácia Amada — Av. San Blás, Com Capitão Miranda — https://www.comprasparaguai.com.br/lojas/farmacia-amada/
+- Farmácia Amada — Av. Emiliano R. Fernández, Com Capitão Miranda — https://www.comprasparaguai.com.br/lojas/farmacia-amada/
+- Farmácia Amada — Super Carretera - Av. Mariscal Francisco Solano López, Frente ao Centro de Salud — https://www.comprasparaguai.com.br/lojas/farmacia-amada/
+- Farmácia Amada — Super Carretera - Av. Mariscal Francisco Solano López, Frente Apamap — https://www.comprasparaguai.com.br/lojas/farmacia-amada/
+- Farmácia Amada — Av. Julio César Riquelme, Com R.I.3 Corrales · Km 7 — https://www.comprasparaguai.com.br/lojas/farmacia-amada/
+- Farmatitu — Av. Monday, Km 7 — https://www.comprasparaguai.com.br/lojas/farmatitu/
+- Farmatitu — Super Carretera - Av. Mariscal Francisco Solano López, Km 4 — https://www.comprasparaguai.com.br/lojas/farmatitu/
+- Farmatitu — Av. San José, Km 5, 5 — https://www.comprasparaguai.com.br/lojas/farmatitu/
+- Farmatitu — Av. Adrián Jara, Esquina com a Rua Abay — https://www.comprasparaguai.com.br/lojas/farmatitu/
+- Farmatitu — Av. Julio César Riquelme, C/ Batollon 40 -- Km 7 — https://www.comprasparaguai.com.br/lojas/farmatitu/
+- Farmacia Amor — Av. San Blás, A cima da casa China ao lado do Banco de Fomento — https://www.comprasparaguai.com.br/lojas/farmacia-amor/
+- Mercosur Cambios — Av. Monseñor Rodriguez, Com Boquerón -- 712 — https://www.comprasparaguai.com.br/lojas/mercosur-cambios/
+- Mercosur Cambios — Super Carretera - Av. Mariscal Francisco Solano López, Km 4 — https://www.comprasparaguai.com.br/lojas/mercosur-cambios/
+- Versani — Rubio NU, Com Adrián Jara — https://www.comprasparaguai.com.br/lojas/versani/
+- Chenson — Rua Abay, Com Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/chenson/
+- Chenson — Rubio NU, Nº 155 — https://www.comprasparaguai.com.br/lojas/chenson/
+- Bonanza Cambios — Av. Adrián Jara, Com Curupayty — https://www.comprasparaguai.com.br/lojas/bonanza-cambios/
+- Mundo Musical — Av. San Blás, 112 — https://www.comprasparaguai.com.br/lojas/mundo-musical/
+- Farmacenter — Av. Carlos Antonio López — https://www.comprasparaguai.com.br/lojas/farmacenter/
+- Farmacenter — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/farmacenter/
+- Farmacenter — Av. Julio César Riquelme — https://www.comprasparaguai.com.br/lojas/farmacenter/
+- Farmacenter — Av. San José — https://www.comprasparaguai.com.br/lojas/farmacenter/
+- Farmacenter — Av. Mariscal López — https://www.comprasparaguai.com.br/lojas/farmacenter/
+- Brands Importados — Av. Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/brands-importados/
+- Farma Next — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/farma-next/
+- Maxi Cambios — Av. Mariscal López, Com El Trebol — https://www.comprasparaguai.com.br/lojas/maxi-cambios/
+- Makro Sport — Rua Camilo Recalde, 220 — https://www.comprasparaguai.com.br/lojas/makro-sport/
+- Cambios Chaco — Av. Adrián Jara, Com Curupayty, 860 — https://www.comprasparaguai.com.br/lojas/cambios-chaco/
+- Mundial Câmbios — Super Carretera - Av. Mariscal Francisco Solano López, Km 4 — https://www.comprasparaguai.com.br/lojas/mundial-cambios/
+- Casa Japon — Av. Carlos Antonio López, 241 — https://www.comprasparaguai.com.br/lojas/casa-japon/
+- Chacomer — Av. Monseñor Rodriguez, KM 4, 5 — https://www.comprasparaguai.com.br/lojas/chacomer/
+- Chacomer — Av. Julio César Riquelme, KM 7 — https://www.comprasparaguai.com.br/lojas/chacomer/
+- Chacomer — Av. Bernardino Caballero, 1181 — https://www.comprasparaguai.com.br/lojas/chacomer/
+- Chacomer — Av. Mariscal López, Km 6.200 — https://www.comprasparaguai.com.br/lojas/chacomer/
+- Cambios Alberdi — Av. Monseñor Rodriguez, Esquina com Pampliega — https://www.comprasparaguai.com.br/lojas/cambios-alberdi/
+- Norte Cambios — Rua Curupayty, Entre Av. Adrián Jara e Rua Pai Perez — https://www.comprasparaguai.com.br/lojas/norte-cambios/
+- Money — Av. Adrián Jara, Com Boquerón — https://www.comprasparaguai.com.br/lojas/money/
+- Diva S.A. — Av. Adrián Jara, Com Carlos Antonio López, 222 — https://www.comprasparaguai.com.br/lojas/diva-sa/
+- Papelaria Cassol — Av. San Blás, 9055 — https://www.comprasparaguai.com.br/lojas/papelaria-cassol/
+- Baterias Parana — Av. San Blás, KM 4 — https://www.comprasparaguai.com.br/lojas/baterias-parana/
+- Casa de los Compresores — Super Carretera - Av. Mariscal Francisco Solano López, Km 4 — https://www.comprasparaguai.com.br/lojas/casa-de-los-compresores/
+- Setga Ferramentas — Av. Adrián Jara — https://www.comprasparaguai.com.br/lojas/setga-ferramentas/
+- Bristol S.A. — Av. Nanawa, 189 — https://www.comprasparaguai.com.br/lojas/bristol-sa/
+- Bristol S.A. — Av. San Blás, Km 3, 5 — https://www.comprasparaguai.com.br/lojas/bristol-sa/
+- Bristol S.A. — Av. Julio César Riquelme, Com Rua 7 · Km 7 — https://www.comprasparaguai.com.br/lojas/bristol-sa/
+- Dp Internacional — Av. San José, Com Rua Guido Spano — https://www.comprasparaguai.com.br/lojas/dp-internacional/
+- FE Cambios — Av. Monseñor Rodriguez, Entre Boqueron e Abay — https://www.comprasparaguai.com.br/lojas/fe-cambios/
+- Milane Yewear — Av. Paraguay — https://www.comprasparaguai.com.br/lojas/milane-yewear/
+- Fashion Celina — Av. Adrián Jara, Com Luis M. Argaña, 0 — https://www.comprasparaguai.com.br/lojas/fashion-celina/
+- Cambios Triple C — Av. Mariscal Lopez, Com Rua Iturbe Nº 1704 — https://www.comprasparaguai.com.br/lojas/cambios-triple-c/
+- Best Quality — Av. San Blás — https://www.comprasparaguai.com.br/lojas/best-quality/
+- Pilar — Av. Mariscal López, Super Rodovia Km. 4 — https://www.comprasparaguai.com.br/lojas/pilar/
+- Mekka Store — Av. San Blás, Ao lado do Shopping Americana — https://www.comprasparaguai.com.br/lojas/mekka-store/
+- Vatekano — Av. San Blás, 112 — https://www.comprasparaguai.com.br/lojas/vatekano/
+- Iluminat PY — Av. Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/iluminat-py/
+- Green Valley — Av. San Blás — https://www.comprasparaguai.com.br/lojas/green-valley/
+- Centurion — Av. Monseñor Rodriguez — https://www.comprasparaguai.com.br/lojas/centurion/
+- Farmácia El Killo — Rua Camilo Recalde — https://www.comprasparaguai.com.br/lojas/farmacia-el-killo/

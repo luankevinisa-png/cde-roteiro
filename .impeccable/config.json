@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "instrument sans",
+        "createdAt": "2026-11-20T14:12:37.790Z",
+        "reason": "Claude chose it for this utility page (pairs with Bricolage Grotesque); not in the generic Inter/Roboto set"
+      }
+    ]
+  }
+}
