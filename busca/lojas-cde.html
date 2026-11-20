@@ -76,6 +76,12 @@ h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; line
 .banner svg { width: 34px; height: 34px; flex: none; transition: transform 0.2s }
 .banner b { display: block; font-size: 24px; line-height: 1.05; font-variant-numeric: tabular-nums }
 .banner span { display: block; font-size: 14px; color: var(--banner-sub); overflow-wrap: anywhere }
+.appbar { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: var(--surface); border-radius: 16px; padding: 8px 8px 8px 14px; box-shadow: 0 2px 12px rgb(0 0 0 / 0.12) }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.03em }
+.flag { width: 26px; height: 17px; border-radius: 3px; border: 1px solid var(--line); flex: none;
+  background: linear-gradient(#d52b1e 0 33.3%, #ffffff 33.3% 66.6%, #0038a8 66.6% 100%) }
+.appbar .chip { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .chip { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
   font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: var(--surface); border-radius: 22px 22px 0 0;
@@ -151,11 +157,14 @@ dd a { color: var(--fg); font-weight: 700 }
   <section class="view" id="v-rota" aria-label="Roteiro" style="overflow:hidden">
     <div id="map" role="region" aria-label="Mapa com a rota a pé"></div>
     <div class="over top">
+      <header class="appbar">
+        <span class="brand">jaha<span class="flag" role="img" aria-label="Bandeira do Paraguai"></span></span>
+        <span class="chip" id="progress"></span>
+      </header>
       <div class="banner" id="banner" hidden>
         <svg id="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V5M5 11l7-7 7 7"/></svg>
         <div><b id="turn-dist"></b><span id="turn-text"></span></div>
       </div>
-      <span class="chip" id="progress"></span>
     </div>
     <div class="sheet" id="sheet">
       <div class="grab"></div>

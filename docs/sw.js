@@ -1,6 +1,6 @@
 // Guarda o app para abrir sem internet. A página tenta a rede primeiro (lojas novas aparecem),
 // e só usa a cópia guardada quando está offline. Mapa e rota continuam precisando de internet.
-const CACHE = "jaha-v2";
+const CACHE = "jaha-v3";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"];
