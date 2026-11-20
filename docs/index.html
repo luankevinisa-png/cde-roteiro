@@ -50,6 +50,12 @@ h1 { font: 700 clamp(26px, 6vw, 34px)/1.1 var(--font-display); margin: 0; letter
   border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
 .field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted) }
 button:disabled { opacity: 0.5; cursor: not-allowed }
+.trip { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line) }
+.trip input { font: 600 17px var(--font-display); color: var(--fg); background: transparent; border: 0;
+  border-bottom: 1.5px dashed var(--line); padding: 4px 0; width: 100%; min-width: 0 }
+.trip input:focus { outline: none; border-bottom-color: var(--accent) }
+.trip .row .btn { min-height: 44px }
+.trip.current { background: var(--accent-soft); border-radius: 12px; padding: 12px; border-bottom: 0 }
 .msg { font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 8px 10px }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted) }
 .link { background: none; border: 0; padding: 6px 2px; font: 600 14px var(--font-body); color: var(--accent); cursor: pointer; min-height: 40px }
@@ -160,7 +166,8 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45) }
     <div class="tools">
       <span id="progress"></span>
       <button class="link" type="button" id="undo">Desfazer última</button>
-      <button class="link danger" type="button" id="reset">Reiniciar roteiro</button>
+      <button class="link" type="button" id="finish">Finalizar e salvar</button>
+      <button class="link" type="button" id="saved">Meus roteiros</button>
       <button class="link" type="button" id="add">+ Adicionar loja aqui</button>
       <button class="link" type="button" id="export" hidden>Copiar lojas adicionadas</button>
     </div>
@@ -206,6 +213,15 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45) }
     <label class="field">Andar (opcional)<input id="add-andar" placeholder="Ex.: Térreo, 2º andar" autocomplete="off"></label>
     <button class="btn main" type="submit" id="add-save">Salvar loja</button>
   </form>
+</dialog>
+<dialog id="saved-dlg" aria-labelledby="saved-h">
+  <div class="sheet">
+    <div class="top">
+      <div><h2 id="saved-h">Meus roteiros</h2><div class="stop-meta">Toque no nome para mudar. Continuar traz as lojas visitadas de volta.</div></div>
+      <button class="btn ghost" type="button" id="saved-close" aria-label="Fechar">✕</button>
+    </div>
+    <div id="saved-list"></div>
+  </div>
 </dialog>
 <datalist id="dl-nichos"></datalist><datalist id="dl-gals"></datalist>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -262,7 +278,7 @@ const posOf = l => l.Galeria ? GAL_POS.get(l.Galeria) : (l.lat != null ? { lat: 
 const fill = (sel, values) => [...new Set(values)].sort((a, b) => a.localeCompare(b, "pt")).forEach(v => sel.append(new Option(v, v)));
 
 // ---------- estado do roteiro (visitadas + histórico para desfazer + origem) ----------
-let state = { visitadas: [], historico: [], origem: null, extras: [] };
+let state = { visitadas: [], historico: [], origem: null, extras: [], roteiros: [], atualId: null };
 const LS_KEY = "roteiro";
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY) || "{}")) } catch {}
 let visited = new Set(state.visitadas);
@@ -303,7 +319,8 @@ function save() {
       const d = snap.data();
       // lojas adicionadas: junta as da conta com as deste aparelho (a mais recente de cada vence)
       const extras = [...new Map([...(d.extras || []), ...(state.extras || [])].map(e => [e.criada, e])).values()];
-      state = { visitadas: d.visitadas || [], historico: d.historico || [], origem: d.origem || null, extras };
+      const roteiros = [...new Map([...(d.roteiros || []), ...(state.roteiros || [])].map(r => [r.id, r])).values()];
+      state = { visitadas: d.visitadas || [], historico: d.historico || [], origem: d.origem || null, extras, roteiros, atualId: d.atualId ?? null };
       reindex();
       visited = new Set(state.visitadas);
       try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch {}
@@ -357,11 +374,61 @@ $("undo").addEventListener("click", () => {
   last.forEach(id => visited.delete(id));
   save(); render(); toast("Desfeito");
 });
-let resetArmed;
-$("reset").addEventListener("click", () => { // confirmação dentro da página (confirm() não funciona aqui)
-  if (!resetArmed) { $("reset").textContent = "Toque de novo para apagar"; resetArmed = setTimeout(() => { resetArmed = null; $("reset").textContent = "Reiniciar roteiro" }, 3000); return }
-  clearTimeout(resetArmed); resetArmed = null; $("reset").textContent = "Reiniciar roteiro";
-  visited.clear(); state.historico = []; save(); render(); toast("Roteiro reiniciado");
+// ---------- roteiros salvos: finalizar guarda, continuar traz de volta ----------
+const fmtData = t => new Date(t).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const roteiroAtual = () => state.roteiros.find(r => r.id === state.atualId);
+function guardarAtual() { // salva (ou atualiza) o roteiro em andamento; false se não há visitas
+  if (!visited.size) return false;
+  const r = roteiroAtual();
+  const dados = { visitadas: [...visited], nichos: [...NSEL], data: Date.now() };
+  if (r) Object.assign(r, dados);
+  else state.roteiros.unshift({ id: Date.now(), nome: `Roteiro de ${fmtData(Date.now())}`, ...dados });
+  return true;
+}
+function limparAtual() { visited.clear(); state.historico = []; state.atualId = null }
+$("finish").addEventListener("click", () => {
+  if (!guardarAtual()) return toast("Marque pelo menos uma loja antes de salvar");
+  const nome = (roteiroAtual() || state.roteiros[0]).nome;
+  limparAtual(); save(); render(); toast(`“${nome}” salvo em Meus roteiros`);
+});
+function renderSaved() {
+  const rs = state.roteiros;
+  $("saved-list").innerHTML = rs.length ? rs.map(r => `<div class="trip${r.id === state.atualId ? " current" : ""}">
+      <input type="text" value="${esc(r.nome)}" data-rename="${r.id}" aria-label="Nome do roteiro" maxlength="60">
+      <div class="stop-meta">${fmtData(r.data)} · ${r.visitadas.length} ${r.visitadas.length === 1 ? "loja visitada" : "lojas visitadas"}${r.nichos?.length ? " · " + esc(r.nichos.join(", ")) : ""}${r.id === state.atualId ? " · em andamento" : ""}</div>
+      <div class="row">
+        ${r.id === state.atualId ? "" : `<button class="btn main" type="button" data-resume="${r.id}">Continuar</button>`}
+        <button class="btn ghost" type="button" data-del="${r.id}">Apagar</button>
+      </div></div>`).join("")
+    : `<p class="empty">Nenhum roteiro salvo ainda. Use “Finalizar e salvar” quando terminar o dia.</p>`;
+}
+$("saved").addEventListener("click", () => { renderSaved(); $("saved-dlg").showModal() });
+$("saved-close").addEventListener("click", () => $("saved-dlg").close());
+$("saved-list").addEventListener("change", e => {
+  const i = e.target.closest("[data-rename]"); if (!i) return;
+  const r = state.roteiros.find(x => x.id === +i.dataset.rename), nome = i.value.trim();
+  if (!r) return;
+  if (!nome) { i.value = r.nome; return toast("O nome não pode ficar vazio") }
+  r.nome = nome; save(); render(); toast("Nome salvo");
+});
+$("saved-list").addEventListener("click", e => {
+  const go = e.target.closest("[data-resume]");
+  if (go) {
+    const r = state.roteiros.find(x => x.id === +go.dataset.resume);
+    if (guardarAtual()) toast("O roteiro em andamento foi salvo antes de trocar");
+    limparAtual();
+    r.visitadas.forEach(id => visited.add(id)); state.atualId = r.id;
+    $("nicho").querySelectorAll("input").forEach(x => x.checked = (r.nichos || []).includes(x.value)); syncNichos();
+    save(); render(); $("saved-dlg").close(); return toast(`Continuando “${r.nome}”`);
+  }
+  const del = e.target.closest("[data-del]");
+  if (del) { // dois toques para apagar (confirm() não funciona dentro do claude.ai)
+    if (!del.dataset.armed) { del.dataset.armed = 1; del.textContent = "Toque de novo para apagar"; return }
+    const id = +del.dataset.del;
+    state.roteiros = state.roteiros.filter(x => x.id !== id);
+    if (state.atualId === id) state.atualId = null;
+    save(); render(); renderSaved(); toast("Roteiro apagado");
+  }
 });
 
 // ---------- próxima parada: galeria = uma parada ----------
@@ -386,7 +453,8 @@ let currentStop = null;
 function renderRoute() {
   const s = currentStop = nextStop();
   const total = LOJAS.filter(inFilter).length, done = LOJAS.filter(l => inFilter(l) && visited.has(l.id)).length;
-  $("progress").textContent = `${done} de ${total} visitadas`;
+  $("progress").textContent = `${done} de ${total} visitadas` + (roteiroAtual() ? ` · ${roteiroAtual().nome}` : "");
+  $("saved").textContent = state.roteiros.length ? `Meus roteiros (${state.roteiros.length})` : "Meus roteiros";
   $("origin-label").textContent = state.origem ? `Calculando a partir de: ${state.origem.label}` : "";
   $("stop-actions").hidden = !s;
   updateNav(s);
