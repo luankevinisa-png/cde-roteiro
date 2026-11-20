@@ -7,7 +7,9 @@ import csv
 import json
 import re
 import sys
+import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
@@ -16,7 +18,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "dados"
-OVERPASS = "https://overpass-api.de/api/interpreter"
+SERVERS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter",
+           "https://overpass.kumi.systems/api/interpreter"]
 AREA = 'area["name"="Ciudad del Este"]["boundary"="administrative"]->.a;'
 COLS = ["Nome", "Nicho", "Galeria", "Andar", "Box", "Endereço", "Latitude", "Longitude",
         "Horário", "Telefone", "WhatsApp", "Observação"]
@@ -46,10 +49,20 @@ DAYS = {"Mo": "Seg", "Tu": "Ter", "We": "Qua", "Th": "Qui", "Fr": "Sex", "Sa": "
 
 
 def overpass(query):
-    req = urllib.request.Request(OVERPASS, data=urllib.parse.urlencode({"data": query}).encode(),
-                                 headers={"User-Agent": "cde-roteiro/1.0 (uso pessoal)"})
-    with urllib.request.urlopen(req, timeout=180) as r:
-        return json.load(r)
+    """Servidores públicos do Overpass às vezes respondem 502/504 quando lotados: tenta de novo e troca de servidor."""
+    erro = None
+    for tentativa in range(3):
+        for url in SERVERS:
+            req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": query}).encode(),
+                                         headers={"User-Agent": "cde-roteiro/1.0 (uso pessoal)"})
+            try:
+                with urllib.request.urlopen(req, timeout=180) as r:
+                    return json.load(r)
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+                erro = e
+                print(f"  {url}: {e} — tentando de novo", file=sys.stderr)
+        time.sleep(15 * (tentativa + 1))
+    raise SystemExit(f"Overpass fora do ar agora ({erro}). Tente de novo em alguns minutos.")
 
 
 def meters(a, b):
