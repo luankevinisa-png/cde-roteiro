@@ -63,7 +63,21 @@ button:disabled { opacity: 0.5; cursor: not-allowed }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 select { width: 100%; min-width: 0; font: 500 14px var(--font-body); color: var(--fg); background: var(--surface);
   border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
-select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.multi { position: relative; min-width: 0 }
+.multi summary { list-style: none; cursor: pointer; font: 500 14px var(--font-body); color: var(--fg); background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 30px 10px 12px; min-height: 44px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative }
+.multi summary::-webkit-details-marker { display: none }
+.multi summary::after { content: "▾"; position: absolute; right: 12px; color: var(--muted) }
+.multi[open] summary { border-color: var(--accent) }
+.opts { position: absolute; left: 0; top: calc(100% + 6px); z-index: 6; width: min(320px, calc(100vw - 32px));
+  max-height: 55vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 6px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.18) }
+.opts label { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; font-size: 15px; cursor: pointer }
+.opts label:hover { background: var(--accent-soft) }
+.opts input { width: 20px; height: 20px; accent-color: var(--accent); flex: none }
+.opts .link { width: 100%; text-align: left; padding: 10px }
+summary:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 .count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums }
 
 .list { display: grid; gap: 12px; margin-top: 14px; grid-template-columns: 1fr }
@@ -155,7 +169,10 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45) }
   <div class="bar">
     <input id="q" class="search" type="search" placeholder="Nome da loja, galeria ou rua" aria-label="Buscar loja" autocomplete="off">
     <div class="filters">
-      <select id="nicho" aria-label="Filtrar por nicho"><option value="">Todos os nichos</option></select>
+      <details class="multi" id="nicho-box">
+        <summary id="nicho-sum">Todos os nichos</summary>
+        <div class="opts" id="nicho" role="group" aria-label="Escolha um ou mais nichos"></div>
+      </details>
       <select id="galeria" aria-label="Filtrar por galeria"><option value="">Todas as galerias</option><option value="-">Só lojas de rua</option></select>
     </div>
     <div class="count" id="count" aria-live="polite"></div>
@@ -251,7 +268,17 @@ try { Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY) || "{}")) } c
 let visited = new Set(state.visitadas);
 let remoteDoc = null, writing = Promise.resolve();
 reindex();
-fill($("nicho"), BASE.flatMap(nichos));
+$("nicho").innerHTML = `<button class="link" type="button" id="nicho-clear">Todos os nichos</button>` +
+  [...new Set(BASE.flatMap(nichos))].sort((a, b) => a.localeCompare(b, "pt"))
+    .map(v => `<label><input type="checkbox" value="${esc(v)}">${esc(v)}</label>`).join("");
+let NSEL = new Set(); // nichos marcados; vazio = todos
+function syncNichos() {
+  NSEL = new Set([...$("nicho").querySelectorAll("input:checked")].map(i => i.value));
+  $("nicho-sum").textContent = !NSEL.size ? "Todos os nichos" : NSEL.size === 1 ? [...NSEL][0] : `${NSEL.size} nichos`;
+}
+$("nicho").addEventListener("change", () => { syncNichos(); render() });
+$("nicho-clear").addEventListener("click", () => { $("nicho").querySelectorAll("input").forEach(i => i.checked = false); syncNichos(); render(); $("nicho-box").open = false });
+document.addEventListener("click", e => { if (!$("nicho-box").contains(e.target)) $("nicho-box").open = false });
 fill($("galeria"), [...new Set(BASE.map(l => l.Galeria).filter(Boolean))]);
 
 function save() {
@@ -338,8 +365,8 @@ $("reset").addEventListener("click", () => { // confirmação dentro da página 
 });
 
 // ---------- próxima parada: galeria = uma parada ----------
-const inFilter = l => { const n = $("nicho").value, g = $("galeria").value;
-  return (!n || nichos(l).includes(n)) && (!g || (g === "-" ? !l.Galeria : l.Galeria === g)) };
+const inFilter = l => { const g = $("galeria").value;
+  return (!NSEL.size || nichos(l).some(x => NSEL.has(x))) && (!g || (g === "-" ? !l.Galeria : l.Galeria === g)) };
 
 function nextStop() {
   if (!state.origem) return null;
@@ -471,7 +498,7 @@ function renderSheet() {
   const ls = GALERIAS.get(openGal).filter(inFilter);
   const pend = ls.filter(l => !visited.has(l.id)).length;
   $("sheet-h").textContent = openGal;
-  $("sheet-meta").textContent = `${pend} de ${ls.length} ${ls.length > 1 ? "lojas" : "loja"} pendentes` + ($("nicho").value ? ` · ${$("nicho").value}` : "")
+  $("sheet-meta").textContent = `${pend} de ${ls.length} ${ls.length > 1 ? "lojas" : "loja"} pendentes` + (NSEL.size ? ` · ${[...NSEL].join(", ")}` : "")
     + (state.origem && GAL_POS.get(openGal) ? ` · ${fmtDist(haversine(state.origem, GAL_POS.get(openGal)))}` : "");
   const pos = GAL_POS.get(openGal);
   $("sheet-go").hidden = !pos; if (pos) $("sheet-go").href = walkUrl(pos);
@@ -527,7 +554,7 @@ function render() {
     : `<p class="empty">Nenhuma loja encontrada. Tente parte do nome, sem acento.</p>`;
   $("count").textContent = `${shown.length} lojas` + (shown.length > 150 ? " (mostrando 150, busque para achar outras)" : "") + (visited.size ? ` · ${LOJAS.filter(l => visited.has(l.id)).length} visitadas escondidas` : "") + (state.origem ? " · mais perto primeiro" : "");
   renderRoute(); renderSheet();
-  try { localStorage.setItem("filtros", JSON.stringify({ q: $("q").value, n: $("nicho").value, g: $("galeria").value })) } catch {}
+  try { localStorage.setItem("filtros", JSON.stringify({ q: $("q").value, n: [...NSEL], g: $("galeria").value })) } catch {}
 }
 
 let toastTimer;
@@ -591,10 +618,10 @@ $("list").addEventListener("click", e => {
   copyText(fullAddress(BY_ID.get(b.dataset.copy)), "Endereço copiado");
 });
 
-["q", "nicho", "galeria"].forEach(id => $(id).addEventListener("input", render));
+["q", "galeria"].forEach(id => $(id).addEventListener("input", render));
 try {
   const f = JSON.parse(localStorage.getItem("filtros") || "{}");
-  $("q").value = f.q || ""; $("nicho").value = f.n || ""; $("galeria").value = f.g || "";
+  $("q").value = f.q || ""; [].concat(f.n || []).forEach(v => { const i = [...$("nicho").querySelectorAll("input")].find(x => x.value === v); if (i) i.checked = true }); syncNichos(); $("galeria").value = f.g || "";
 } catch {}
 render();
 </script>
