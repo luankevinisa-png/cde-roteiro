@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parent.parent
 with open(ROOT / "dados" / "lojas.csv", encoding="utf-8-sig", newline="") as f:
     lojas = list(csv.DictReader(f, delimiter=";"))
 assert lojas and "Nome" in lojas[0], "lojas.csv vazio ou sem a coluna Nome"
+extras = ROOT / "dados" / "lojas_extras.csv"  # lojas que você adicionou; o scraper nunca mexe neste arquivo
+if extras.exists():
+    with open(extras, encoding="utf-8-sig", newline="") as f:
+        lojas += [r for r in csv.DictReader(f, delimiter=";") if (r.get("Nome") or "").strip()]
 
 data = json.dumps(lojas, ensure_ascii=False).replace("</", "<\\/")  # nada no texto fecha o <script>
 page = (ROOT / "busca" / "template.html").read_text(encoding="utf-8")

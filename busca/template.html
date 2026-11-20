@@ -46,8 +46,10 @@ h1 { font: 700 clamp(26px, 6vw, 34px)/1.1 var(--font-display); margin: 0; letter
 .step small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px }
 #map { height: 320px; border-radius: 14px; border: 1px solid var(--line); z-index: 0; background: var(--bg) }
 .origin { display: grid; gap: 8px; font-size: 14px; color: var(--muted) }
-.origin input { width: 100%; font: 500 15px var(--font-body); color: var(--fg); background: var(--bg);
+.origin input, .field input { width: 100%; font: 500 15px var(--font-body); color: var(--fg); background: var(--bg);
   border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
+.field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted) }
+button:disabled { opacity: 0.5; cursor: not-allowed }
 .msg { font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 8px 10px }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted) }
 .link { background: none; border: 0; padding: 6px 2px; font: 600 14px var(--font-body); color: var(--accent); cursor: pointer; min-height: 40px }
@@ -57,7 +59,7 @@ h1 { font: 700 clamp(26px, 6vw, 34px)/1.1 var(--font-display); margin: 0; letter
   padding-block: 12px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); margin-top: 8px }
 .search { width: 100%; font: 500 17px var(--font-body); color: var(--fg); background: var(--surface);
   border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 16px; min-height: 52px }
-.search:focus, .origin input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
+.search:focus, .origin input:focus, .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 select { width: 100%; min-width: 0; font: 500 14px var(--font-body); color: var(--fg); background: var(--surface);
   border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px }
@@ -145,6 +147,8 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45) }
       <span id="progress"></span>
       <button class="link" type="button" id="undo">Desfazer última</button>
       <button class="link danger" type="button" id="reset">Reiniciar roteiro</button>
+      <button class="link" type="button" id="add">+ Adicionar loja aqui</button>
+      <button class="link" type="button" id="export" hidden>Copiar lojas adicionadas</button>
     </div>
   </section>
 
@@ -173,6 +177,20 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45) }
     <div id="sheet-list"></div>
   </div>
 </dialog>
+<dialog id="add-dlg" aria-labelledby="add-h">
+  <form class="sheet" id="add-form">
+    <div class="top">
+      <div><h2 id="add-h">Adicionar loja aqui</h2><div class="stop-meta" id="add-pos"></div></div>
+      <button class="btn ghost" type="button" id="add-close" aria-label="Fechar">✕</button>
+    </div>
+    <label class="field">Nome da loja<input id="add-nome" required autocomplete="off"></label>
+    <label class="field">Nicho (opcional)<input id="add-nicho" list="dl-nichos" autocomplete="off"></label>
+    <label class="field">Galeria (opcional)<input id="add-gal" list="dl-gals" autocomplete="off"></label>
+    <label class="field">Andar (opcional)<input id="add-andar" placeholder="Ex.: Térreo, 2º andar" autocomplete="off"></label>
+    <button class="btn main" type="submit" id="add-save">Salvar loja</button>
+  </form>
+</dialog>
+<datalist id="dl-nichos"></datalist><datalist id="dl-gals"></datalist>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -198,33 +216,43 @@ const fmtDist = m => m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).t
 console.assert(Math.abs(haversine({ lat: -25.5106, lng: -54.6093 }, { lat: -25.5106, lng: -54.6193 }) - 1004) < 5, "haversine");
 
 // ids estáveis: mesmo texto do CSV = mesma loja (filiais têm endereço diferente)
-LOJAS.forEach(l => {
-  l.id = [l.Nome, l.Galeria, l.Andar, l.Endereço, l.Latitude].join("|");
+function prep(l) {
+  l.id = l.criada ? "extra|" + l.criada : [l.Nome, l.Galeria, l.Andar, l.Endereço, l.Latitude].join("|");
   l._q = norm([l.Nome, l.Galeria, l.Endereço, l.Nicho].join(" "));
   const lat = parseFloat(l.Latitude), lng = parseFloat(l.Longitude);
   if (isFinite(lat) && isFinite(lng)) { l.lat = lat; l.lng = lng }
-});
-LOJAS.sort((a, b) => a.Nome.localeCompare(b.Nome, "pt"));
-const BY_ID = new Map(LOJAS.map(l => [l.id, l]));
-const GALERIAS = new Map();
-LOJAS.forEach(l => { if (l.Galeria) (GALERIAS.get(l.Galeria) || GALERIAS.set(l.Galeria, []).get(l.Galeria)).push(l) });
-const GAL_POS = new Map([...GALERIAS].map(([g, ls]) => {
-  const c = ls.filter(l => l.lat != null);
-  return [g, c.length ? { lat: c.reduce((s, l) => s + l.lat, 0) / c.length, lng: c.reduce((s, l) => s + l.lng, 0) / c.length } : null];
-}));
+  return l;
+}
+const BASE = LOJAS.map(prep);
+let BY_ID, GALERIAS, GAL_POS;
+function reindex() { // base do site + lojas que você adicionou
+  LOJAS.splice(0, LOJAS.length, ...BASE, ...(state.extras || []).map(e => prep({ ...e })));
+  LOJAS.sort((a, b) => a.Nome.localeCompare(b.Nome, "pt"));
+  BY_ID = new Map(LOJAS.map(l => [l.id, l]));
+  GALERIAS = new Map();
+  LOJAS.forEach(l => { if (l.Galeria) (GALERIAS.get(l.Galeria) || GALERIAS.set(l.Galeria, []).get(l.Galeria)).push(l) });
+  GAL_POS = new Map([...GALERIAS].map(([g, ls]) => {
+    const c = ls.filter(l => l.lat != null);
+    return [g, c.length ? { lat: c.reduce((s, l) => s + l.lat, 0) / c.length, lng: c.reduce((s, l) => s + l.lng, 0) / c.length } : null];
+  }));
+  const n = (state.extras || []).length;
+  $("sub").textContent = `${BASE.length} endereços do Compras Paraguai de ${GERADO}` + (n ? ` + ${n} ${n > 1 ? "adicionadas" : "adicionada"} por você` : "") + " · horário de Brasília";
+  $("export").hidden = !n;
+  $("dl-nichos").innerHTML = [...new Set(LOJAS.flatMap(nichos))].map(v => `<option value="${esc(v)}">`).join("");
+  $("dl-gals").innerHTML = [...GALERIAS.keys()].map(v => `<option value="${esc(v)}">`).join("");
+}
 const posOf = l => l.Galeria ? GAL_POS.get(l.Galeria) : (l.lat != null ? { lat: l.lat, lng: l.lng } : null);
-
 const fill = (sel, values) => [...new Set(values)].sort((a, b) => a.localeCompare(b, "pt")).forEach(v => sel.append(new Option(v, v)));
-fill($("nicho"), LOJAS.flatMap(nichos));
-fill($("galeria"), [...GALERIAS.keys()]);
-$("sub").textContent = `${LOJAS.length} endereços · lojas do OpenStreetMap de ${GERADO} · horário do Paraguai (igual a Brasília)`;
 
 // ---------- estado do roteiro (visitadas + histórico para desfazer + origem) ----------
-let state = { visitadas: [], historico: [], origem: null };
+let state = { visitadas: [], historico: [], origem: null, extras: [] };
 const LS_KEY = "roteiro";
 try { Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY) || "{}")) } catch {}
 let visited = new Set(state.visitadas);
 let remoteDoc = null, writing = Promise.resolve();
+reindex();
+fill($("nicho"), BASE.flatMap(nichos));
+fill($("galeria"), [...new Set(BASE.map(l => l.Galeria).filter(Boolean))]);
 
 function save() {
   state.visitadas = [...visited];
@@ -246,7 +274,10 @@ function save() {
     remoteDoc = doc;
     if (snap.exists) {
       const d = snap.data();
-      state = { visitadas: d.visitadas || [], historico: d.historico || [], origem: d.origem || null };
+      // lojas adicionadas: junta as da conta com as deste aparelho (a mais recente de cada vence)
+      const extras = [...new Map([...(d.extras || []), ...(state.extras || [])].map(e => [e.criada, e])).values()];
+      state = { visitadas: d.visitadas || [], historico: d.historico || [], origem: d.origem || null, extras };
+      reindex();
       visited = new Set(state.visitadas);
       try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch {}
       render();
@@ -475,7 +506,7 @@ function card(l) {
     <div class="top"><h2 class="name">${esc(l.Nome)}</h2>${l.Nicho ? `<span class="nicho" title="${esc(l.Nicho)}">${esc(nichos(l)[0])}</span>` : ""}</div>
     ${where}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : ""}
-    ${l.Observação ? `<div class="note">${esc(l.Observação)}</div>` : ""}
+    ${l.Observação || l.criada ? `<div class="note">${esc(l.Observação)}${l.criada ? ` <button class="link danger" type="button" data-remove="${esc(l.id)}">Remover</button>` : ""}</div>` : ""}
     <div class="actions">
       <button class="btn ghost" type="button" data-copy="${esc(l.id)}">Copiar</button>
       <a class="btn main" href="${esc(mapsUrl(l))}" target="_blank" rel="noopener">${pin}Maps</a>
@@ -502,18 +533,62 @@ function render() {
 let toastTimer;
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200) }
 
-$("list").addEventListener("click", e => {
-  const gal = e.target.closest("[data-gal]"); if (gal) return openGaleria(gal.dataset.gal);
-  const v = e.target.closest("[data-visit]"); if (v) return markVisited([v.dataset.visit], BY_ID.get(v.dataset.visit).Nome);
-  const b = e.target.closest("[data-copy]"); if (!b) return;
-  const text = fullAddress(BY_ID.get(b.dataset.copy));
+function copyText(text, okMsg) {
   const fallback = () => { // clipboard recusado: tenta o método antigo; se falhar, mostra o texto
     const ta = document.createElement("textarea");
     ta.value = text; ta.style.cssText = "position:fixed;opacity:0"; document.body.append(ta); ta.select();
     const ok = document.execCommand && document.execCommand("copy"); ta.remove();
-    toast(ok ? "Endereço copiado" : text);
+    toast(ok ? okMsg : text);
   };
-  navigator.clipboard ? navigator.clipboard.writeText(text).then(() => toast("Endereço copiado"), fallback) : fallback();
+  navigator.clipboard ? navigator.clipboard.writeText(text).then(() => toast(okMsg), fallback) : fallback();
+}
+
+// ---------- adicionar loja na posição atual ----------
+let addPos = null;
+function openAdd() {
+  addPos = null; $("add-form").reset(); $("add-save").disabled = true;
+  $("add-pos").textContent = "Pegando sua localização…";
+  $("add-dlg").showModal(); $("add-nome").focus();
+  const use = (lat, lng, fonte) => {
+    addPos = { lat, lng }; $("add-save").disabled = false;
+    $("add-pos").textContent = `Posição: ${fonte}`;
+    let best = null; // sugere a galeria mais perto (até 40 m)
+    GAL_POS.forEach((p, g) => { const d = p && haversine(addPos, p); if (p && d < 40 && (!best || d < best.d)) best = { g, d } });
+    if (best && !$("add-gal").value) $("add-gal").value = best.g;
+  };
+  const fallback = () => state.origem ? use(state.origem.lat, state.origem.lng, state.origem.label)
+    : ($("add-pos").textContent = "Sem localização. Libere o GPS ou cole sua localização no topo da página e tente de novo.");
+  if (!navigator.geolocation) return fallback();
+  navigator.geolocation.getCurrentPosition(p => use(p.coords.latitude, p.coords.longitude, `GPS agora (±${Math.round(p.coords.accuracy)} m)`),
+    fallback, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+}
+$("add").addEventListener("click", openAdd);
+$("add-close").addEventListener("click", () => $("add-dlg").close());
+$("add-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const nome = $("add-nome").value.trim();
+  if (!nome || !addPos) return;
+  state.extras = [...(state.extras || []), { Nome: nome, Nicho: $("add-nicho").value.trim(), Galeria: $("add-gal").value.trim(),
+    Andar: $("add-andar").value.trim(), Box: "", Endereço: "", Latitude: addPos.lat.toFixed(6), Longitude: addPos.lng.toFixed(6),
+    Horário: "", Telefone: "", WhatsApp: "", Observação: `Adicionada por você em ${new Date().toLocaleDateString("pt-BR")}`, criada: Date.now() }];
+  reindex(); save(); render(); $("add-dlg").close(); toast(`${nome} adicionada`);
+});
+const COLS = ["Nome", "Nicho", "Galeria", "Andar", "Box", "Endereço", "Latitude", "Longitude", "Horário", "Telefone", "WhatsApp", "Observação"];
+$("export").addEventListener("click", () => copyText( // linhas no formato de dados/lojas_extras.csv
+  [COLS, ...state.extras.map(e => COLS.map(c => String(e[c] ?? "").replace(/[;\n]/g, " ")))].map(r => r.join(";")).join("\n"),
+  "Copiado. Cole em dados/lojas_extras.csv no computador"));
+
+$("list").addEventListener("click", e => {
+  const rm = e.target.closest("[data-remove]");
+  if (rm) { // dois toques para remover (confirm() não funciona dentro do claude.ai)
+    if (!rm.dataset.armed) { rm.dataset.armed = 1; rm.textContent = "Toque de novo para remover"; return }
+    state.extras = state.extras.filter(x => "extra|" + x.criada !== rm.dataset.remove);
+    visited.delete(rm.dataset.remove); reindex(); save(); render(); return toast("Loja removida");
+  }
+  const gal = e.target.closest("[data-gal]"); if (gal) return openGaleria(gal.dataset.gal);
+  const v = e.target.closest("[data-visit]"); if (v) return markVisited([v.dataset.visit], BY_ID.get(v.dataset.visit).Nome);
+  const b = e.target.closest("[data-copy]"); if (!b) return;
+  copyText(fullAddress(BY_ID.get(b.dataset.copy)), "Endereço copiado");
 });
 
 ["q", "nicho", "galeria"].forEach(id => $(id).addEventListener("input", render));
